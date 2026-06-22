@@ -1,3 +1,5 @@
+# No AI! No Linux! No Pull Requests!
+
 #  Please checkout [halo3_cache_debug_recomp](https://github.com/twist84/halo3_cache_debug_recomp) for a more updated recomp of `halo3_cache_debug.xex` from the same build
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/twist84/halo3_cache_release_recomp)
