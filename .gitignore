@@ -1,0 +1,36 @@
+# Upstream checkouts and everything derived from them (never committed)
+/ref/
+/games/
+
+# SDK builds and downloads under tools/ (our scripts and extract-xiso stay)
+/tools/rexglue-sdk/
+/tools/rexglue-src/
+/tools/rexglue-resync/
+/tools/rexglue-h3/
+/tools/nightly/
+/tools/vvl/
+/tools/xenia/
+/tools/extract-xiso/build/
+/tools/*.log
+/tools/*.zip
+
+# Generated stuff anywhere
+__pycache__/
+*.pyc
+build/
+
+# autoport work products and logs
+autoport/resync/shaders-work/
+autoport/resync/work-rtc/
+
+# xenon-gpu captures, corpora and reports
+/xenon-gpu/corpus/
+/xenon-gpu/analysis/
+/xenon-gpu/docs/
+/xenon-gpu/build/
+/xenon-gpu/*.json
+
+# Logs, frames, leftovers
+*.log
+*.ppm
+*.pid

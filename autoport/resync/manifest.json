@@ -1,0 +1,1395 @@
+[
+ {
+  "rex": "include/rex/graphics/command_processor.h",
+  "canary": "src/xenia/gpu/command_processor.h",
+  "head_sim": 0.5628672150411281,
+  "base": "4644657e83af7e8086be58b11d42d445b1d19ba7",
+  "base_sim": 0.6703621581670363,
+  "base_date": "2025-10-23",
+  "revisions_since_base": 6
+ },
+ {
+  "rex": "include/rex/graphics/d3d12/command_processor.h",
+  "canary": "src/xenia/gpu/d3d12/d3d12_command_processor.h",
+  "head_sim": 0.6548898197049717,
+  "base": "fe1fd361375fbd08fb873cad8e1a24146ae7ef53",
+  "base_sim": 0.7643257216716932,
+  "base_date": "2025-12-14",
+  "revisions_since_base": 10
+ },
+ {
+  "rex": "include/rex/graphics/d3d12/deferred_command_list.h",
+  "canary": "src/xenia/gpu/d3d12/deferred_command_list.h",
+  "head_sim": 0.9205600589535741,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9205600589535741,
+  "base_date": "HEAD",
+  "revisions_since_base": 3
+ },
+ {
+  "rex": "include/rex/graphics/d3d12/graphics_system.h",
+  "canary": "src/xenia/gpu/d3d12/d3d12_graphics_system.h",
+  "head_sim": 0.6325581395348837,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.6325581395348837,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/d3d12/pipeline_cache.h",
+  "canary": "src/xenia/gpu/d3d12/pipeline_cache.h",
+  "head_sim": 0.7706842255940453,
+  "base": "5845f3437b8c22f95d4b9daee008c7b6e58c1fd8",
+  "base_sim": 0.8411917847844952,
+  "base_date": "2025-12-31",
+  "revisions_since_base": 6
+ },
+ {
+  "rex": "include/rex/graphics/d3d12/primitive_processor.h",
+  "canary": "src/xenia/gpu/d3d12/d3d12_primitive_processor.h",
+  "head_sim": 0.8773109243697479,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8773109243697479,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "include/rex/graphics/d3d12/render_target_cache.h",
+  "canary": "src/xenia/gpu/d3d12/d3d12_render_target_cache.h",
+  "head_sim": 0.9113171243659262,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.9214715245843651,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 4
+ },
+ {
+  "rex": "include/rex/graphics/d3d12/shader.h",
+  "canary": "src/xenia/gpu/d3d12/d3d12_shader.h",
+  "head_sim": 0.8456659619450317,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8456659619450317,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/d3d12/shared_memory.h",
+  "canary": "src/xenia/gpu/d3d12/d3d12_shared_memory.h",
+  "head_sim": 0.8189415041782729,
+  "base": "80dad41454459ec53038d021dc5c933a3cc47769",
+  "base_sim": 0.853625170998632,
+  "base_date": "2026-02-09",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "include/rex/graphics/d3d12/texture_cache.h",
+  "canary": "src/xenia/gpu/d3d12/d3d12_texture_cache.h",
+  "head_sim": 0.7129695251594613,
+  "base": "80dad41454459ec53038d021dc5c933a3cc47769",
+  "base_sim": 0.9400986610288936,
+  "base_date": "2026-02-09",
+  "revisions_since_base": 6
+ },
+ {
+  "rex": "include/rex/graphics/flags.h",
+  "canary": null,
+  "sim": 0.09294871794871795
+ },
+ {
+  "rex": "include/rex/graphics/format/dxbc.h",
+  "canary": "src/xenia/gpu/dxbc.h",
+  "head_sim": 0.9944037606728279,
+  "base": "fbd620c22b44638b66a70bba80d6f30d55a10924",
+  "base_sim": 0.9958368026644463,
+  "base_date": "2026-05-01",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/format/ucode.h",
+  "canary": "src/xenia/gpu/ucode.h",
+  "head_sim": 0.989597855227882,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.989597855227882,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/graphics_system.h",
+  "canary": "src/xenia/gpu/graphics_system.h",
+  "head_sim": 0.7310126582278481,
+  "base": "b5432ab83fbc66905462c41eb5c6309c48d3aa6d",
+  "base_sim": 0.7834877843302444,
+  "base_date": "2025-08-12",
+  "revisions_since_base": 4
+ },
+ {
+  "rex": "include/rex/graphics/packet_disassembler.h",
+  "canary": "src/xenia/gpu/packet_disassembler.h",
+  "head_sim": 0.5387894288150042,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.5387894288150042,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/render_target/cache.h",
+  "canary": "src/xenia/gpu/render_target_cache.h",
+  "head_sim": 0.9244841523080196,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.9341290893015031,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 5
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/shader/dxbc.h",
+  "canary": "src/xenia/gpu/dxbc_shader.h",
+  "head_sim": 0.8932384341637011,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8932384341637011,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/shader/dxbc_translator.h",
+  "canary": "src/xenia/gpu/dxbc_shader_translator.h",
+  "head_sim": 0.9390622447312531,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.9815699658703072,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 14
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/shader/interpreter.h",
+  "canary": "src/xenia/gpu/shader_interpreter.h",
+  "head_sim": 0.912981455064194,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.912981455064194,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/shader/shader.h",
+  "canary": "src/xenia/gpu/shader.h",
+  "head_sim": 0.9710079615442392,
+  "base": "a06be03f1b8082d7337cdca26ba3d05c9f44ba8b",
+  "base_sim": 0.9824029126213593,
+  "base_date": "2025-08-06",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/shader/spirv.h",
+  "canary": "src/xenia/gpu/spirv_shader.h",
+  "head_sim": 0.8854368932038835,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8854368932038835,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/shader/spirv_builder.h",
+  "canary": "src/xenia/gpu/spirv_builder.h",
+  "head_sim": 0.8235294117647058,
+  "base": "f722b6b85f0fa79cadaa035f1f52290384cef26d",
+  "base_sim": 0.8446269678302533,
+  "base_date": "2025-09-27",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/shader/spirv_translator.h",
+  "canary": "src/xenia/gpu/spirv_shader_translator.h",
+  "head_sim": 0.8762091686527408,
+  "base": "d430342d93c69d67e7f29f48b4179cab2f5c9e04",
+  "base_sim": 0.9256499923977497,
+  "base_date": "2025-08-27",
+  "revisions_since_base": 29
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/shader/translator.h",
+  "canary": "src/xenia/gpu/shader_translator.h",
+  "head_sim": 0.8842504743833017,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8842504743833017,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/texture/cache.h",
+  "canary": "src/xenia/gpu/texture_cache.h",
+  "head_sim": 0.8164263016377414,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.903770102820986,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 12
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/texture/conversion.h",
+  "canary": null,
+  "sim": 0.20642978003384094
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/texture/info.h",
+  "canary": "src/xenia/gpu/texture_info.h",
+  "head_sim": 0.6906101254868022,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.6906101254868022,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/pipeline/texture/util.h",
+  "canary": "src/xenia/gpu/texture_util.h",
+  "head_sim": 0.8392701998262381,
+  "base": "28b69c21becd785364bb7c13dfe5b4dd757a8bb3",
+  "base_sim": 0.8843416370106761,
+  "base_date": "2026-01-06",
+  "revisions_since_base": 4
+ },
+ {
+  "rex": "include/rex/graphics/pipeline_util.h",
+  "canary": "src/xenia/gpu/pipeline_util.h",
+  "head_sim": 0.9492537313432836,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9492537313432836,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/primitive_processor.h",
+  "canary": "src/xenia/gpu/primitive_processor.h",
+  "head_sim": 0.9654209955031788,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9654209955031788,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/register_file.h",
+  "canary": "src/xenia/gpu/register_file.h",
+  "head_sim": 0.908344733242134,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.908344733242134,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "include/rex/graphics/register_table.inc",
+  "canary": "src/xenia/gpu/register_table.inc",
+  "head_sim": 0.7752256843331392,
+  "base": "a06be03f1b8082d7337cdca26ba3d05c9f44ba8b",
+  "base_sim": 0.8733595800524935,
+  "base_date": "2025-08-06",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/registers.h",
+  "canary": "src/xenia/gpu/registers.h",
+  "head_sim": 0.9915822023707267,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9915822023707267,
+  "base_date": "HEAD",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "include/rex/graphics/sampler_info.h",
+  "canary": "src/xenia/gpu/sampler_info.h",
+  "head_sim": 0.8711656441717791,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8711656441717791,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "include/rex/graphics/shared_memory.h",
+  "canary": "src/xenia/gpu/shared_memory.h",
+  "head_sim": 0.8062216461438756,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.8914675767918089,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "include/rex/graphics/util/draw.h",
+  "canary": "src/xenia/gpu/draw_util.h",
+  "head_sim": 0.722279792746114,
+  "base": "80dad41454459ec53038d021dc5c933a3cc47769",
+  "base_sim": 0.963302752293578,
+  "base_date": "2026-02-09",
+  "revisions_since_base": 7
+ },
+ {
+  "rex": "include/rex/graphics/util/draw_extent_estimator.h",
+  "canary": "src/xenia/gpu/draw_extent_estimator.h",
+  "head_sim": 0.8459016393442623,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8459016393442623,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "include/rex/graphics/video_mode_util.h",
+  "canary": null,
+  "sim": 0.14285714285714285
+ },
+ {
+  "rex": "include/rex/graphics/vulkan/command_processor.h",
+  "canary": "src/xenia/gpu/vulkan/vulkan_command_processor.h",
+  "head_sim": 0.7535200371344577,
+  "base": "0b2ffa31485318f18838afa142cdb51cf1b35213",
+  "base_sim": 0.7989382879893829,
+  "base_date": "2025-08-20",
+  "revisions_since_base": 15
+ },
+ {
+  "rex": "include/rex/graphics/vulkan/deferred_command_buffer.h",
+  "canary": "src/xenia/gpu/vulkan/deferred_command_buffer.h",
+  "head_sim": 0.857186127517795,
+  "base": "b5432ab83fbc66905462c41eb5c6309c48d3aa6d",
+  "base_sim": 0.925963149078727,
+  "base_date": "2025-08-12",
+  "revisions_since_base": 5
+ },
+ {
+  "rex": "include/rex/graphics/vulkan/graphics_system.h",
+  "canary": "src/xenia/gpu/vulkan/vulkan_graphics_system.h",
+  "head_sim": 0.6956521739130435,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.6956521739130435,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/vulkan/pipeline_cache.h",
+  "canary": "src/xenia/gpu/vulkan/vulkan_pipeline_cache.h",
+  "head_sim": 0.6534605037906579,
+  "base": "2ad412a141e9aff21ef88849330813c2c92bfe87",
+  "base_sim": 0.692627824019025,
+  "base_date": "2025-12-01",
+  "revisions_since_base": 9
+ },
+ {
+  "rex": "include/rex/graphics/vulkan/primitive_processor.h",
+  "canary": "src/xenia/gpu/vulkan/vulkan_primitive_processor.h",
+  "head_sim": 0.9052969502407705,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9052969502407705,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/vulkan/render_target_cache.h",
+  "canary": "src/xenia/gpu/vulkan/vulkan_render_target_cache.h",
+  "head_sim": 0.9282254513430207,
+  "base": "b5432ab83fbc66905462c41eb5c6309c48d3aa6d",
+  "base_sim": 0.9363784665579119,
+  "base_date": "2025-08-12",
+  "revisions_since_base": 4
+ },
+ {
+  "rex": "include/rex/graphics/vulkan/shader.h",
+  "canary": "src/xenia/gpu/vulkan/vulkan_shader.h",
+  "head_sim": 0.8768267223382046,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8768267223382046,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "include/rex/graphics/vulkan/shared_memory.h",
+  "canary": "src/xenia/gpu/vulkan/vulkan_shared_memory.h",
+  "head_sim": 0.8098591549295775,
+  "base": "b5432ab83fbc66905462c41eb5c6309c48d3aa6d",
+  "base_sim": 0.8383658969804618,
+  "base_date": "2025-08-12",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "include/rex/graphics/vulkan/texture_cache.h",
+  "canary": "src/xenia/gpu/vulkan/vulkan_texture_cache.h",
+  "head_sim": 0.7945619335347432,
+  "base": "0b2ffa31485318f18838afa142cdb51cf1b35213",
+  "base_sim": 0.8524822695035461,
+  "base_date": "2025-08-20",
+  "revisions_since_base": 10
+ },
+ {
+  "rex": "include/rex/graphics/xenos.h",
+  "canary": "src/xenia/gpu/xenos.h",
+  "head_sim": 0.9669780577883988,
+  "base": "a06be03f1b8082d7337cdca26ba3d05c9f44ba8b",
+  "base_sim": 0.9927753695676337,
+  "base_date": "2025-08-06",
+  "revisions_since_base": 5
+ },
+ {
+  "rex": "src/graphics/command_processor.cpp",
+  "canary": "src/xenia/gpu/command_processor.cc",
+  "head_sim": 0.38405797101449274,
+  "base": "90a7cc4feeb69dab6bb6e8ff48c5a8c23e8fa56a",
+  "base_sim": 0.3961066440964875,
+  "base_date": "2025-12-04",
+  "revisions_since_base": 8
+ },
+ {
+  "rex": "src/graphics/d3d12/command_processor.cpp",
+  "canary": "src/xenia/gpu/d3d12/d3d12_command_processor.cc",
+  "head_sim": 0.7478731488517784,
+  "base": "b5432ab83fbc66905462c41eb5c6309c48d3aa6d",
+  "base_sim": 0.8547600447606781,
+  "base_date": "2025-08-12",
+  "revisions_since_base": 24
+ },
+ {
+  "rex": "src/graphics/d3d12/deferred_command_list.cpp",
+  "canary": "src/xenia/gpu/d3d12/deferred_command_list.cc",
+  "head_sim": 0.925754060324826,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.925754060324826,
+  "base_date": "HEAD",
+  "revisions_since_base": 6
+ },
+ {
+  "rex": "src/graphics/d3d12/graphics_system.cpp",
+  "canary": "src/xenia/gpu/d3d12/d3d12_graphics_system.cc",
+  "head_sim": 0.6761904761904762,
+  "base": "b5432ab83fbc66905462c41eb5c6309c48d3aa6d",
+  "base_sim": 0.6823529411764706,
+  "base_date": "2025-08-12",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/d3d12/pipeline_cache.cpp",
+  "canary": null,
+  "sim": 0.1609183379964961
+ },
+ {
+  "rex": "src/graphics/d3d12/primitive_processor.cpp",
+  "canary": "src/xenia/gpu/d3d12/d3d12_primitive_processor.cc",
+  "head_sim": 0.9141347424042272,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9141347424042272,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/d3d12/render_target_cache.cpp",
+  "canary": "src/xenia/gpu/d3d12/d3d12_render_target_cache.cc",
+  "head_sim": 0.8562715460090162,
+  "base": "c7f61342d7061b8264e4b988b8d2e03351b6e088",
+  "base_sim": 0.9709605559779636,
+  "base_date": "2026-01-20",
+  "revisions_since_base": 9
+ },
+ {
+  "rex": "src/graphics/d3d12/shader.cpp",
+  "canary": "src/xenia/gpu/d3d12/d3d12_shader.cc",
+  "head_sim": 0.9153776160145587,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9153776160145587,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/d3d12/shared_memory.cpp",
+  "canary": "src/xenia/gpu/d3d12/d3d12_shared_memory.cc",
+  "head_sim": 0.7256934715606612,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.8732542819499342,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 4
+ },
+ {
+  "rex": "src/graphics/d3d12/texture_cache.cpp",
+  "canary": "src/xenia/gpu/d3d12/d3d12_texture_cache.cc",
+  "head_sim": 0.8607451849919568,
+  "base": "0b2ffa31485318f18838afa142cdb51cf1b35213",
+  "base_sim": 0.9316246667240045,
+  "base_date": "2025-08-20",
+  "revisions_since_base": 19
+ },
+ {
+  "rex": "src/graphics/flags.cpp",
+  "canary": null,
+  "sim": 0.3018867924528302
+ },
+ {
+  "rex": "src/graphics/format/ucode.cpp",
+  "canary": "src/xenia/gpu/ucode.cc",
+  "head_sim": 0.9895916733386709,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9895916733386709,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "src/graphics/graphics_system.cpp",
+  "canary": "src/xenia/gpu/graphics_system.cc",
+  "head_sim": 0.5679078489150817,
+  "base": "b5432ab83fbc66905462c41eb5c6309c48d3aa6d",
+  "base_sim": 0.711864406779661,
+  "base_date": "2025-08-12",
+  "revisions_since_base": 8
+ },
+ {
+  "rex": "src/graphics/packet_disassembler.cpp",
+  "canary": "src/xenia/gpu/packet_disassembler.cc",
+  "head_sim": 0.7749622926093515,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.7749622926093515,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/pipeline/render_target/cache.cpp",
+  "canary": "src/xenia/gpu/render_target_cache.cc",
+  "head_sim": 0.920808561236623,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.920808561236623,
+  "base_date": "HEAD",
+  "revisions_since_base": 9
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/dxbc.cpp",
+  "canary": "src/xenia/gpu/dxbc_shader.cc",
+  "head_sim": 0.8414634146341463,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8414634146341463,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/dxbc_translator.cpp",
+  "canary": "src/xenia/gpu/dxbc_shader_translator.cc",
+  "head_sim": 0.986713780918728,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.9970074102223067,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 8
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/dxbc_translator_alu.cpp",
+  "canary": "src/xenia/gpu/dxbc_shader_translator_alu.cc",
+  "head_sim": 0.9639982110912343,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9639982110912343,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/dxbc_translator_fetch.cpp",
+  "canary": "src/xenia/gpu/dxbc_shader_translator_fetch.cc",
+  "head_sim": 0.896755609460279,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.9949932836732202,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 13
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/dxbc_translator_memexport.cpp",
+  "canary": "src/xenia/gpu/dxbc_shader_translator_memexport.cc",
+  "head_sim": 0.9820250284414107,
+  "base": "4cb783bf226d25db9333b6457ad3c928b8d31752",
+  "base_sim": 0.9960695389266818,
+  "base_date": "2025-07-18",
+  "revisions_since_base": 3
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/dxbc_translator_om.cpp",
+  "canary": "src/xenia/gpu/dxbc_shader_translator_om.cc",
+  "head_sim": 0.8549907716865366,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.9886618705035971,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 6
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/interpreter.cpp",
+  "canary": "src/xenia/gpu/shader_interpreter.cc",
+  "head_sim": 0.9796360732416861,
+  "base": "92ada8ebc0b6618f2c48202b615068c92a6a9252",
+  "base_sim": 0.9925455070788789,
+  "base_date": "2026-08-11",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/shader.cpp",
+  "canary": "src/xenia/gpu/shader.cc",
+  "head_sim": 0.9540229885057471,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9540229885057471,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/spirv.cpp",
+  "canary": "src/xenia/gpu/spirv_shader.cc",
+  "head_sim": 0.8414634146341463,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8414634146341463,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/spirv_builder.cpp",
+  "canary": "src/xenia/gpu/spirv_builder.cc",
+  "head_sim": 0.9565724278635966,
+  "base": "4cb783bf226d25db9333b6457ad3c928b8d31752",
+  "base_sim": 0.9794336810730253,
+  "base_date": "2025-07-18",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/spirv_translator.cpp",
+  "canary": "src/xenia/gpu/spirv_shader_translator.cc",
+  "head_sim": 0.7672643715891838,
+  "base": "792e61f6e25b99218c97636d8a0b12683b4967f3",
+  "base_sim": 0.7889391741192265,
+  "base_date": "2025-11-20",
+  "revisions_since_base": 21
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/spirv_translator_alu.cpp",
+  "canary": "src/xenia/gpu/spirv_shader_translator_alu.cc",
+  "head_sim": 0.9543704049480686,
+  "base": "20b226dbdfeed5f77f0972e17d7bc9f03b9f5115",
+  "base_sim": 0.9954111822243691,
+  "base_date": "2025-10-11",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/spirv_translator_fetch.cpp",
+  "canary": "src/xenia/gpu/spirv_shader_translator_fetch.cc",
+  "head_sim": 0.8591370122056042,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.9754691943127962,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 18
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/spirv_translator_memexport.cpp",
+  "canary": "src/xenia/gpu/spirv_shader_translator_memexport.cc",
+  "head_sim": 0.957796221084231,
+  "base": "4cb783bf226d25db9333b6457ad3c928b8d31752",
+  "base_sim": 0.9910925286311579,
+  "base_date": "2025-07-18",
+  "revisions_since_base": 6
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/spirv_translator_rb.cpp",
+  "canary": "src/xenia/gpu/spirv_shader_translator_rb.cc",
+  "head_sim": 0.8082128219008584,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.9597679348432444,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 12
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/translator.cpp",
+  "canary": "src/xenia/gpu/shader_translator.cc",
+  "head_sim": 0.9885885885885886,
+  "base": "fbdb1f2817c4c876227cf15c0835994d23731967",
+  "base_sim": 0.9897192328503577,
+  "base_date": "2026-08-02",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/pipeline/shader/translator_disasm.cpp",
+  "canary": "src/xenia/gpu/shader_translator_disasm.cc",
+  "head_sim": 0.9886492622020431,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9886492622020431,
+  "base_date": "HEAD",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "src/graphics/pipeline/texture/cache.cpp",
+  "canary": "src/xenia/gpu/texture_cache.cc",
+  "head_sim": 0.6651636606546426,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.785013876040703,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 13
+ },
+ {
+  "rex": "src/graphics/pipeline/texture/conversion.cpp",
+  "canary": null,
+  "sim": 0.13260340632603407
+ },
+ {
+  "rex": "src/graphics/pipeline/texture/extent.cpp",
+  "canary": "src/xenia/gpu/texture_extent.cc",
+  "head_sim": 0.939106901217862,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.939106901217862,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/pipeline/texture/info.cpp",
+  "canary": "src/xenia/gpu/texture_info.cc",
+  "head_sim": 0.7833622183708839,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.7833622183708839,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "src/graphics/pipeline/texture/info_formats.cpp",
+  "canary": null,
+  "sim": 0.11314741035856574
+ },
+ {
+  "rex": "src/graphics/pipeline/texture/util.cpp",
+  "canary": "src/xenia/gpu/texture_util.cc",
+  "head_sim": 0.8621303883149269,
+  "base": "28b69c21becd785364bb7c13dfe5b4dd757a8bb3",
+  "base_sim": 0.8998185117967332,
+  "base_date": "2026-01-06",
+  "revisions_since_base": 6
+ },
+ {
+  "rex": "src/graphics/plugin_main.cpp",
+  "canary": null,
+  "sim": 0.2585858585858586
+ },
+ {
+  "rex": "src/graphics/primitive_processor.cpp",
+  "canary": "src/xenia/gpu/primitive_processor.cc",
+  "head_sim": 0.9387559152321514,
+  "base": "0d395ce9abf0374ae895d5474bc942dcfbfe7542",
+  "base_sim": 0.961100968965033,
+  "base_date": "2026-08-15",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "src/graphics/register_file.cpp",
+  "canary": null,
+  "sim": 0.3136645962732919
+ },
+ {
+  "rex": "src/graphics/registers.cpp",
+  "canary": "src/xenia/gpu/registers.cc",
+  "head_sim": 0.8103448275862069,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8103448275862069,
+  "base_date": "HEAD",
+  "revisions_since_base": 0
+ },
+ {
+  "rex": "src/graphics/sampler_info.cpp",
+  "canary": "src/xenia/gpu/sampler_info.cc",
+  "head_sim": 0.9237113402061856,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9237113402061856,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/apply_gamma_pwl_cs.h",
+  "canary": null,
+  "sim": 0.16255976461934535
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/apply_gamma_pwl_fxaa_luma_cs.h",
+  "canary": null,
+  "sim": 0.14972527472527472
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/apply_gamma_pwl_fxaa_luma_ps.h",
+  "canary": null,
+  "sim": 0.19578193394349383
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/apply_gamma_pwl_ps.h",
+  "canary": null,
+  "sim": 0.212618841832325
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/apply_gamma_table_cs.h",
+  "canary": null,
+  "sim": 0.24344176285414482
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/apply_gamma_table_fxaa_luma_cs.h",
+  "canary": null,
+  "sim": 0.21689059500959693
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/apply_gamma_table_fxaa_luma_ps.h",
+  "canary": null,
+  "sim": 0.3017964071856287
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/apply_gamma_table_ps.h",
+  "canary": null,
+  "sim": 0.34185733512786004
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/fullscreen_cw_vs.h",
+  "canary": "src/xenia/gpu/shaders/bytecode/vulkan_spirv/placeholder_ps.h",
+  "head_sim": 0.416597510373444,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.416597510373444,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/host_depth_store_1xmsaa_cs.h",
+  "canary": null,
+  "sim": 0.1342281879194631
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/host_depth_store_2xmsaa_cs.h",
+  "canary": null,
+  "sim": 0.11917098445595854
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/host_depth_store_4xmsaa_cs.h",
+  "canary": null,
+  "sim": 0.13375981389938935
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/passthrough_position_xy_vs.h",
+  "canary": "src/xenia/gpu/shaders/bytecode/vulkan_spirv/placeholder_ps.h",
+  "head_sim": 0.5257510729613734,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.5257510729613734,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_clear_32bpp_cs.h",
+  "canary": null,
+  "sim": 0.16135734072022162
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_clear_32bpp_scaled_cs.h",
+  "canary": null,
+  "sim": 0.14436183395291202
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_clear_64bpp_cs.h",
+  "canary": null,
+  "sim": 0.17240103588605254
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_clear_64bpp_scaled_cs.h",
+  "canary": null,
+  "sim": 0.15564462257849032
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_downscale_cs.h",
+  "canary": null,
+  "sim": 0.1109753116597409
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_fast_32bpp_1x2xmsaa_cs.h",
+  "canary": null,
+  "sim": 0.05574503116547101
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_fast_32bpp_1x2xmsaa_scaled_cs.h",
+  "canary": null,
+  "sim": 0.04661225292555807
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_fast_32bpp_4xmsaa_cs.h",
+  "canary": null,
+  "sim": 0.05099089448312801
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_fast_32bpp_4xmsaa_scaled_cs.h",
+  "canary": null,
+  "sim": 0.043190273114962346
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_fast_64bpp_1x2xmsaa_cs.h",
+  "canary": null,
+  "sim": 0.05844636251541307
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_fast_64bpp_1x2xmsaa_scaled_cs.h",
+  "canary": null,
+  "sim": 0.04813648827053925
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_fast_64bpp_4xmsaa_cs.h",
+  "canary": null,
+  "sim": 0.057550477572240355
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_fast_64bpp_4xmsaa_scaled_cs.h",
+  "canary": null,
+  "sim": 0.04746709214200239
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_full_128bpp_cs.h",
+  "canary": null,
+  "sim": 0.016994086058051798
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_full_128bpp_scaled_cs.h",
+  "canary": null,
+  "sim": 0.01638377351071499
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_full_16bpp_cs.h",
+  "canary": null,
+  "sim": 0.009378880836314434
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_full_16bpp_scaled_cs.h",
+  "canary": null,
+  "sim": 0.009176474855370776
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_full_32bpp_cs.h",
+  "canary": null,
+  "sim": 0.009359277892867713
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_full_32bpp_scaled_cs.h",
+  "canary": null,
+  "sim": 0.009183303085299455
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_full_64bpp_cs.h",
+  "canary": null,
+  "sim": 0.010037292708085377
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_full_64bpp_scaled_cs.h",
+  "canary": null,
+  "sim": 0.00972609322441134
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_full_8bpp_cs.h",
+  "canary": null,
+  "sim": 0.018463543552240967
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/resolve_full_8bpp_scaled_cs.h",
+  "canary": null,
+  "sim": 0.017808506180599204
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_128bpb_cs.h",
+  "canary": null,
+  "sim": 0.08005359236308826
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_128bpb_scaled_cs.h",
+  "canary": null,
+  "sim": 0.07211828605914303
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_16bpb_cs.h",
+  "canary": null,
+  "sim": 0.08549454480414953
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_16bpb_scaled_cs.h",
+  "canary": null,
+  "sim": 0.07547765671877467
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_32bpb_cs.h",
+  "canary": null,
+  "sim": 0.08025520483546005
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_32bpb_scaled_cs.h",
+  "canary": null,
+  "sim": 0.07120512438552064
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_64bpb_cs.h",
+  "canary": null,
+  "sim": 0.08005359236308826
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_64bpb_scaled_cs.h",
+  "canary": null,
+  "sim": 0.07104637336504162
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_8bpb_cs.h",
+  "canary": null,
+  "sim": 0.09245837414299707
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_8bpb_scaled_cs.h",
+  "canary": null,
+  "sim": 0.08100223099365025
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_bgrg8_rgb8_cs.h",
+  "canary": null,
+  "sim": 0.060837469772177674
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_bgrg8_rgbg8_cs.h",
+  "canary": null,
+  "sim": 0.0756089844985764
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_ctx1_cs.h",
+  "canary": null,
+  "sim": 0.026251025430680888
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_depth_float_cs.h",
+  "canary": null,
+  "sim": 0.06829547078154022
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_depth_float_scaled_cs.h",
+  "canary": null,
+  "sim": 0.06162970603403816
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_depth_unorm_cs.h",
+  "canary": null,
+  "sim": 0.07947654005745292
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_depth_unorm_scaled_cs.h",
+  "canary": null,
+  "sim": 0.07090986757795814
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_dxn_rg8_cs.h",
+  "canary": null,
+  "sim": 0.009792272708649158
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_dxt1_rgba8_cs.h",
+  "canary": null,
+  "sim": 0.03184671291707962
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_dxt3_rgba8_cs.h",
+  "canary": null,
+  "sim": 0.0351288056206089
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_dxt3a_cs.h",
+  "canary": null,
+  "sim": 0.059173062639267145
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_dxt3aas1111_argb4_cs.h",
+  "canary": null,
+  "sim": 0.03602110022607385
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_dxt3aas1111_bgra4_cs.h",
+  "canary": null,
+  "sim": 0.03602110022607385
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_dxt5_rgba8_cs.h",
+  "canary": null,
+  "sim": 0.013828469361297571
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_dxt5a_r8_cs.h",
+  "canary": null,
+  "sim": 0.009798093676334938
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_gbgr8_grgb8_cs.h",
+  "canary": null,
+  "sim": 0.0756089844985764
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_gbgr8_rgb8_cs.h",
+  "canary": null,
+  "sim": 0.060837469772177674
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r10g11b11_rgba16_cs.h",
+  "canary": null,
+  "sim": 0.05759730087962405
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r10g11b11_rgba16_scaled_cs.h",
+  "canary": null,
+  "sim": 0.05289951305887561
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r10g11b11_rgba16_snorm_cs.h",
+  "canary": null,
+  "sim": 0.04328533912885991
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r10g11b11_rgba16_snorm_scaled_cs.h",
+  "canary": null,
+  "sim": 0.04057724957555178
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r11g11b10_rgba16_cs.h",
+  "canary": null,
+  "sim": 0.05691153708774854
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r11g11b10_rgba16_scaled_cs.h",
+  "canary": null,
+  "sim": 0.052320490367775835
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r11g11b10_rgba16_snorm_cs.h",
+  "canary": null,
+  "sim": 0.04314858277667449
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r11g11b10_rgba16_snorm_scaled_cs.h",
+  "canary": null,
+  "sim": 0.04045704612780364
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r16_snorm_float_cs.h",
+  "canary": null,
+  "sim": 0.0733489187609585
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r16_snorm_float_scaled_cs.h",
+  "canary": null,
+  "sim": 0.0664381755866069
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r16_unorm_float_cs.h",
+  "canary": null,
+  "sim": 0.07250300842358604
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r16_unorm_float_scaled_cs.h",
+  "canary": null,
+  "sim": 0.0652232746955345
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r4g4b4a4_a4r4g4b4_cs.h",
+  "canary": null,
+  "sim": 0.08036314727639543
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r4g4b4a4_a4r4g4b4_scaled_cs.h",
+  "canary": null,
+  "sim": 0.07144992526158446
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r4g4b4a4_b4g4r4a4_cs.h",
+  "canary": null,
+  "sim": 0.07966666666666666
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r4g4b4a4_b4g4r4a4_scaled_cs.h",
+  "canary": null,
+  "sim": 0.07089884307327203
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r4g4b4a4_rgba8_cs.h",
+  "canary": null,
+  "sim": 0.05652559928973069
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r4g4b4a4_rgba8_scaled_cs.h",
+  "canary": null,
+  "sim": 0.051570557899671826
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r5g5b5a1_b5g5r5a1_cs.h",
+  "canary": null,
+  "sim": 0.07909978487506206
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r5g5b5a1_b5g5r5a1_scaled_cs.h",
+  "canary": null,
+  "sim": 0.07044952100221076
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r5g5b6_b5g6r5_swizzle_rbga_cs.h",
+  "canary": null,
+  "sim": 0.08036314727639543
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r5g5b6_b5g6r5_swizzle_rbga_scaled_cs.h",
+  "canary": null,
+  "sim": 0.07144992526158446
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r5g6b5_b5g6r5_cs.h",
+  "canary": null,
+  "sim": 0.07909978487506206
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r5g6b5_b5g6r5_scaled_cs.h",
+  "canary": null,
+  "sim": 0.07044952100221076
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r5g6b5_rgba8_cs.h",
+  "canary": null,
+  "sim": 0.053719589368583884
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_r5g6b5_rgba8_scaled_cs.h",
+  "canary": null,
+  "sim": 0.05083792599257676
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_rg16_snorm_float_cs.h",
+  "canary": null,
+  "sim": 0.06963517824941046
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_rg16_snorm_float_scaled_cs.h",
+  "canary": null,
+  "sim": 0.0632688927943761
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_rg16_unorm_float_cs.h",
+  "canary": null,
+  "sim": 0.0690050107372942
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_rg16_unorm_float_scaled_cs.h",
+  "canary": null,
+  "sim": 0.06225781451821235
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_rgba16_snorm_float_cs.h",
+  "canary": null,
+  "sim": 0.0694905869324474
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_rgba16_snorm_float_scaled_cs.h",
+  "canary": null,
+  "sim": 0.06314998120536273
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_rgba16_unorm_float_cs.h",
+  "canary": null,
+  "sim": 0.06885714285714285
+ },
+ {
+  "rex": "src/graphics/shaders/vulkan_spirv/texture_load_rgba16_unorm_float_scaled_cs.h",
+  "canary": null,
+  "sim": 0.06213742426195694
+ },
+ {
+  "rex": "src/graphics/shared_memory.cpp",
+  "canary": "src/xenia/gpu/shared_memory.cc",
+  "head_sim": 0.7037762237762237,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.7889093137254902,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 4
+ },
+ {
+  "rex": "src/graphics/util/draw.cpp",
+  "canary": "src/xenia/gpu/draw_util.cc",
+  "head_sim": 0.8124694774540127,
+  "base": "a06be03f1b8082d7337cdca26ba3d05c9f44ba8b",
+  "base_sim": 0.9781255557531566,
+  "base_date": "2025-08-06",
+  "revisions_since_base": 13
+ },
+ {
+  "rex": "src/graphics/util/draw_extent_estimator.cpp",
+  "canary": "src/xenia/gpu/draw_extent_estimator.cc",
+  "head_sim": 0.9273516642547033,
+  "base": "a06be03f1b8082d7337cdca26ba3d05c9f44ba8b",
+  "base_sim": 0.9292929292929293,
+  "base_date": "2025-08-06",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "src/graphics/vulkan/command_processor.cpp",
+  "canary": "src/xenia/gpu/vulkan/vulkan_command_processor.cc",
+  "head_sim": 0.656984318455971,
+  "base": "4644657e83af7e8086be58b11d42d445b1d19ba7",
+  "base_sim": 0.7140276730442102,
+  "base_date": "2025-10-23",
+  "revisions_since_base": 32
+ },
+ {
+  "rex": "src/graphics/vulkan/deferred_command_buffer.cpp",
+  "canary": "src/xenia/gpu/vulkan/deferred_command_buffer.cc",
+  "head_sim": 0.8210192205960148,
+  "base": "e7941b0c7d0537408d82bed9b335c60256c3d7c4",
+  "base_sim": 0.8558823529411764,
+  "base_date": "2026-01-14",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/vulkan/graphics_system.cpp",
+  "canary": "src/xenia/gpu/vulkan/vulkan_graphics_system.cc",
+  "head_sim": 0.584717607973422,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.584717607973422,
+  "base_date": "HEAD",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "src/graphics/vulkan/pipeline_cache.cpp",
+  "canary": "src/xenia/gpu/vulkan/vulkan_pipeline_cache.cc",
+  "head_sim": 0.6289870717351633,
+  "base": "5845f3437b8c22f95d4b9daee008c7b6e58c1fd8",
+  "base_sim": 0.6755875793446561,
+  "base_date": "2025-12-31",
+  "revisions_since_base": 16
+ },
+ {
+  "rex": "src/graphics/vulkan/primitive_processor.cpp",
+  "canary": "src/xenia/gpu/vulkan/vulkan_primitive_processor.cc",
+  "head_sim": 0.8846153846153846,
+  "base": "b5432ab83fbc66905462c41eb5c6309c48d3aa6d",
+  "base_sim": 0.888125613346418,
+  "base_date": "2025-08-12",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/vulkan/render_target_cache.cpp",
+  "canary": "src/xenia/gpu/vulkan/vulkan_render_target_cache.cc",
+  "head_sim": 0.8168021206560051,
+  "base": "b5432ab83fbc66905462c41eb5c6309c48d3aa6d",
+  "base_sim": 0.8967485839168636,
+  "base_date": "2025-08-12",
+  "revisions_since_base": 22
+ },
+ {
+  "rex": "src/graphics/vulkan/shader.cpp",
+  "canary": "src/xenia/gpu/vulkan/vulkan_shader.cc",
+  "head_sim": 0.9127906976744186,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.9127906976744186,
+  "base_date": "HEAD",
+  "revisions_since_base": 1
+ },
+ {
+  "rex": "src/graphics/vulkan/shared_memory.cpp",
+  "canary": "src/xenia/gpu/vulkan/vulkan_shared_memory.cc",
+  "head_sim": 0.7927846674182638,
+  "base": "cec9ca0ef2f1343070e6211478db37d4b4a8ad95",
+  "base_sim": 0.8541076487252125,
+  "base_date": "2026-01-17",
+  "revisions_since_base": 2
+ },
+ {
+  "rex": "src/graphics/vulkan/texture_cache.cpp",
+  "canary": "src/xenia/gpu/vulkan/vulkan_texture_cache.cc",
+  "head_sim": 0.7358171994597028,
+  "base": "0b2ffa31485318f18838afa142cdb51cf1b35213",
+  "base_sim": 0.7993770076900614,
+  "base_date": "2025-08-20",
+  "revisions_since_base": 20
+ },
+ {
+  "rex": "src/graphics/xenos.cpp",
+  "canary": "src/xenia/gpu/xenos.cc",
+  "head_sim": 0.8793859649122807,
+  "base": "origin/canary_experimental",
+  "base_sim": 0.8793859649122807,
+  "base_date": "HEAD",
+  "revisions_since_base": 2
+ }
+]

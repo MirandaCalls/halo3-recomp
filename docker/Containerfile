@@ -1,0 +1,6 @@
+FROM registry.fedoraproject.org/fedora:44
+RUN dnf -y install clang lld llvm cmake ninja-build git python3 gtk3-devel \
+    libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel libXext-devel \
+    wayland-devel libxkbcommon-devel mesa-libGL-devel vulkan-loader-devel alsa-lib-devel \
+    pulseaudio-libs-devel pipewire-devel libdecor-devel dbus-devel systemd-devel \
+    zlib-devel which findutils libXScrnSaver-devel libXtst-devel libXfixes-devel libXrender-devel libdrm-devel mesa-libgbm-devel libusb1-devel libXxf86vm-devel jack-audio-connection-kit-devel clang-tools-extra glslang spirv-tools && dnf clean all
