@@ -112,9 +112,9 @@ export MESA_SHADER_CACHE_MAX_SIZE=${MESA_SHADER_CACHE_MAX_SIZE:-10G}
 cd "$BUILD"
 # The GPU plugins live in the SDK. Relink them if this tree was copied from
 # another machine/path (the symlinks port.sh made are absolute).
-for plugin in librexgpu-xenos.so librexgpu-xgpu.so; do
-  [ -e "$SDK_LIB/$plugin" ] || continue
-  [ -e "$plugin" ] || ln -sfn "$SDK_LIB/$plugin" "$plugin"
+for gpu_plugin in librexgpu-xenos.so librexgpu-xgpu.so; do
+  [ -e "$SDK_LIB/$gpu_plugin" ] || continue
+  [ -e "$gpu_plugin" ] || ln -sfn "$SDK_LIB/$gpu_plugin" "$gpu_plugin"
 done
 exec env "${envs[@]}" LD_LIBRARY_PATH="$BUILD:$H3_LIB:$SDK_LIB" ./halo3 \
   --game_data_root="$GAME" --gpu_plugin=$plugin "${window[@]}" "${extra[@]}"
