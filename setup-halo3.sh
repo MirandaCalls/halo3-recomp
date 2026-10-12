@@ -68,15 +68,19 @@ fi
 # Every run, not just after the clone: resumes an interrupted submodule checkout,
 # and is a quick no-op once everything is there.
 git -C "$SRC" submodule update --init --recursive
-# MACOS_PATCH edits lines PATCH adds, so check it first: once it reverses cleanly,
-# both are in.
-if git -C "$SRC" apply --reverse --check "$MACOS_PATCH" 2>/dev/null; then
+# A stamp records which patch contents are applied. When either patch changes,
+# re-apply both to a clean tree; submodules and the out/ build directory are kept,
+# so only the files the patches touch get rebuilt.
+PATCH_STAMP=.autoport-patches
+want=$(cat "$PATCH" "$MACOS_PATCH" | git hash-object --stdin)
+if [ "$(cat "$SRC/$PATCH_STAMP" 2>/dev/null)" = "$want" ]; then
   echo "patches already applied"
 else
-  if ! git -C "$SRC" apply --reverse --check "$PATCH" 2>/dev/null; then
-    git -C "$SRC" apply "$PATCH"
-  fi
+  git -C "$SRC" checkout -- .
+  git -C "$SRC" clean -fdq -e out -e "$PATCH_STAMP"
+  git -C "$SRC" apply "$PATCH"
   git -C "$SRC" apply "$MACOS_PATCH"
+  echo "$want" > "$SRC/$PATCH_STAMP"
   echo "patches applied"
 fi
 

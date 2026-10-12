@@ -51,3 +51,35 @@ index 479739a..6987844 100644
        std::fill(buffer.begin(), buffer.end(), uint8_t(0));  // unreadable range
      }
      std::fwrite(buffer.data(), 1, kChunk, f);
+diff --git a/src/graphics/vulkan/command_processor.cpp b/src/graphics/vulkan/command_processor.cpp
+index 44aa9e2..62d2f73 100644
+--- a/src/graphics/vulkan/command_processor.cpp
++++ b/src/graphics/vulkan/command_processor.cpp
+@@ -12,7 +12,11 @@
+ #include <algorithm>
+ #include <filesystem>
+ #include <dlfcn.h>
++// RenderDoc's app API header has no macOS path (it #errors), so the autoport
++// capture hooks below are compiled out there, as in rex/ui/renderdoc_api.h.
++#if !REX_PLATFORM_MAC
+ #include "../../../thirdparty/renderdoc/renderdoc_app.h"
++#endif
+ #include <array>
+ #include <cstdint>
+ #include <cstring>
+@@ -2379,6 +2383,7 @@ void VulkanCommandProcessor::OnGammaRampPWLValueWritten() {
+ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontbuffer_width,
+                                        uint32_t frontbuffer_height) {
+   stutter::Event('S', 0.0, frontbuffer_ptr);
++#if !REX_PLATFORM_MAC
+   // autoport: capture guest frame N with RenderDoc (AUTOPORT_RDOC_FRAME=N, run under renderdoccmd).
+   // autoport: capture the next guest frame when a trigger file appears
+   // (AUTOPORT_RDOC_TRIGGER_FILE=<path>, run under renderdoccmd). The file is
+@@ -2432,6 +2437,7 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
+       REXGPU_INFO("autoport: RenderDoc capture ended at swap {} ok={}", swap_count, ok);
+     }
+   }
++#endif  // !REX_PLATFORM_MAC
+   SCOPE_profile_cpu_f("gpu");
+   vertex_buffers_in_sync_[0] = 0;
+   vertex_buffers_in_sync_[1] = 0;

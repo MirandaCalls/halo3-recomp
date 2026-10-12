@@ -101,8 +101,10 @@ What differs from the Linux path:
   CPU architecture flags.
 - `autoport/sdk-patches/macos.diff` is applied on top of
   `halo3-system-link.diff`. It replaces the Linux-only `process_vm_readv` (GPU
-  capture memory dump) with `mach_vm_read_overwrite`, and makes the native
-  renderer's `--no-undefined` link flag ld64-compatible.
+  capture memory dump) with `mach_vm_read_overwrite`, makes the native
+  renderer's `--no-undefined` link flag ld64-compatible, and compiles out the
+  RenderDoc frame-capture hooks (`AUTOPORT_RDOC_*`), whose header has no macOS
+  support.
 - The runtime fix-up loop (`autoport/runtime_loop.py`) opens a real window on
   macOS rather than SDL's offscreen driver.
 - `--zt` finds the ZeroTier address on the `feth*` interfaces macOS uses.
