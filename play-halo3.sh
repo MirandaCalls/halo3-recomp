@@ -106,6 +106,17 @@ for arg in "${extra[@]}"; do
   case "$arg" in --fullscreen=*|--window_width=*|--window_height=*) window=() ;; esac
 done
 
+# Halo 3 sets its exposure from a resolved image it reads back on the CPU. With
+# readback off (the SDK default) the campaign renders almost black on macOS.
+# Untested on Linux, so left as is there. A value given after `--` wins.
+game_defaults=()
+if [ "$HOST_OS" = macos ]; then
+  game_defaults=(--readback_resolve=fast)
+fi
+for arg in "${extra[@]}"; do
+  case "$arg" in --readback_resolve=*) game_defaults=() ;; esac
+done
+
 if [ -n "$instance" ] && [ -n "$explicit_ip" ]; then
   echo "--instance cannot be combined with --zt/--ip" >&2
   exit 1
@@ -146,4 +157,4 @@ for gpu_plugin in librexgpu-xenos.$DLEXT librexgpu-xgpu.$DLEXT; do
   [ -e "$gpu_plugin" ] || ln -sfn "$SDK_LIB/$gpu_plugin" "$gpu_plugin"
 done
 exec env "${envs[@]}" "$LIBPATH_VAR=$BUILD:$H3_LIB:$SDK_LIB" ./halo3 \
-  --game_data_root="$GAME" --gpu_plugin=$plugin "${window[@]}" "${extra[@]}"
+  --game_data_root="$GAME" --gpu_plugin=$plugin "${window[@]}" "${game_defaults[@]}" "${extra[@]}"

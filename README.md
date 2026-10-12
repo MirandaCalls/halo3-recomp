@@ -128,6 +128,9 @@ What differs from the Linux path:
   (see below).
 - The runtime fix-up loop (`autoport/runtime_loop.py`) opens a real window on
   macOS rather than SDL's offscreen driver.
+- `play-halo3.sh` passes `--readback_resolve=fast` on macOS. Halo 3 sets its
+  exposure from a resolved image it reads back on the CPU; without readback the
+  campaign renders almost black (the menu looks normal).
 - `--zt` finds the ZeroTier address on the `feth*` interfaces macOS uses.
 - `autoport/clean_shm.sh` is skipped (no `/dev/shm` on macOS).
 - MoltenVK has no `VK_EXT_graphics_pipeline_library`, so the patch's pipeline
