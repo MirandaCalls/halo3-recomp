@@ -4,13 +4,15 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 /* ---------- constants */
 
 /* ---------- definitions */
 
 /* ---------- prototypes */
 
-extern bool scenario_switch_zone_set(long zone_set_index);
+extern bool scenario_switch_zone_set(int32_t zone_set_index);
 extern void scenario_unload(void);
 
 /* ---------- globals */

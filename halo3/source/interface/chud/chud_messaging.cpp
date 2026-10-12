@@ -10,7 +10,7 @@
 
 /* ---------- prototypes */
 
-static void chud_post_action_response(long user_index);
+static void chud_post_action_response(int32_t user_index);
 
 /* ---------- globals */
 
@@ -35,7 +35,7 @@ REX_PPC_HOOK(chud_post_action_response);
 
 /* ---------- private code */
 
-static void chud_post_action_response(long user_index)
+static void chud_post_action_response(int32_t user_index)
 {
 	chud_debug_messages = REXCVAR_GET(chud_debug_messages);
 

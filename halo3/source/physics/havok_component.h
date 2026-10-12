@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 /* ---------- constants */
 
 /* ---------- definitions */
@@ -12,7 +14,7 @@ class c_havok_component
 {
 public:
 //private:
-    static long rigid_body_motion_type_to_havok_motion_type(long rigid_body_motion_type);
+    static int32_t rigid_body_motion_type_to_havok_motion_type(int32_t rigid_body_motion_type);
 };
 
 /* ---------- prototypes */

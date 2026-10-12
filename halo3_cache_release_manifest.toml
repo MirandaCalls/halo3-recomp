@@ -1,0 +1,13 @@
+# halo3_cache_release - ReXGlue project manifest (SDK 0.10+)
+#
+# SDK 0.10 'rexglue codegen' only accepts a manifest with a [project] section.
+# The recompiler settings (switch tables, midasm hooks, function names) stay in
+# halo3_cache_release_config.toml, pulled in through `includes`.
+
+[project]
+name = "halo3_cache_release"
+
+[entrypoint]
+file_path = "../assets/halo3_cache_release.xex"
+out_directory_path = "generated"
+includes = ["halo3_cache_release_config.toml"]

@@ -4,13 +4,15 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 /* ---------- constants */
 
 /* ---------- definitions */
 
 /* ---------- prototypes */
 
-extern real_point3d* object_get_origin(long object_index, real_point3d* origin);
+extern real_point3d* object_get_origin(int32_t object_index, real_point3d* origin);
 
 /* ---------- public code */
 

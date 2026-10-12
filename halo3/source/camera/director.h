@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 /* ---------- constants */
 
 enum e_director_mode
@@ -23,7 +25,7 @@ enum e_director_mode
 /* ---------- prototypes */
 
 extern void director_update(float dt);
-extern void director_set_mode(long user_index, e_director_mode director_mode);
+extern void director_set_mode(int32_t user_index, e_director_mode director_mode);
 
 /* ---------- globals */
 

@@ -46,7 +46,9 @@ protected:
 void Halo3CacheReleaseApp::OnPreSetup(rex::RuntimeConfig& config)
 {
 	REXCVAR_SET(gpu_allow_invalid_fetch_constants, true);
+#if defined(_WIN32)
 	REXCVAR_SET(input_backend, "xinput");
+#endif
 	//REXCVAR_SET(fullscreen, true);
 	//REXCVAR_SET(vsync, false);
 	//REXCVAR_SET(resolution_scale, 2);

@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 #include "input/input_constants.h"
 #include "input/controllers.h"
 #include "input/input_agnostic.h"
@@ -39,8 +41,8 @@ static_assert(sizeof(gamepad_state_be) == 0x3C);
 /* ---------- prototypes */
 
 extern bool input_initialize();
-extern bool input_update_gamepad(unsigned long gamepad_index, unsigned long elapsed_msec, gamepad_state* in_out_gamepad_state, debug_gamepad_data* out_debug_gamepad_data);
-extern bool input_update_gamepad(unsigned long gamepad_index, unsigned long elapsed_msec, gamepad_state_be* in_out_gamepad_state, debug_gamepad_data_be* out_debug_gamepad_data);
+extern bool input_update_gamepad(uint32_t gamepad_index, uint32_t elapsed_msec, gamepad_state* in_out_gamepad_state, debug_gamepad_data* out_debug_gamepad_data);
+extern bool input_update_gamepad(uint32_t gamepad_index, uint32_t elapsed_msec, gamepad_state_be* in_out_gamepad_state, debug_gamepad_data_be* out_debug_gamepad_data);
 extern void input_update();
 extern void input_flush();
 extern void input_suppress();

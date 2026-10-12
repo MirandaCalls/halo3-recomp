@@ -13,8 +13,8 @@
 
 /* ---------- prototypes */
 
-static e_director_mode choose_appropriate_director(long user_index);
-static void change_debug_director_if_necessary(long user_index);
+static e_director_mode choose_appropriate_director(int32_t user_index);
+static void change_debug_director_if_necessary(int32_t user_index);
 
 /* ---------- globals */
 
@@ -43,10 +43,10 @@ void director_update(float dt)
 	REX_PPC_INVOKE(director_update, dt);
 
 #if 1
-	long user_index = 0;
+	int32_t user_index = 0;
 	change_debug_director_if_necessary(user_index);
 #else
-	for (long user_index = 0; user_index < 4; user_index++)
+	for (int32_t user_index = 0; user_index < 4; user_index++)
 	{
 		if (players_user_is_active(user_index))
 		{
@@ -57,23 +57,23 @@ void director_update(float dt)
 #endif
 }
 
-void director_set_mode(long user_index, e_director_mode director_mode)
+void director_set_mode(int32_t user_index, e_director_mode director_mode)
 {
 	REX_PPC_INVOKE(director_set_mode, user_index, director_mode);
 }
 
 /* ---------- private code */
 
-static e_director_mode choose_appropriate_director(long user_index)
+static e_director_mode choose_appropriate_director(int32_t user_index)
 {
 	e_director_mode desired_mode = REX_PPC_INVOKE(choose_appropriate_director, user_index);
 	return desired_mode;
 }
 
-static void change_debug_director_if_necessary(long user_index)
+static void change_debug_director_if_necessary(int32_t user_index)
 {
 #if 1
-	long director_mode = REXCVAR_GET(director_mode_override);
+	int32_t director_mode = REXCVAR_GET(director_mode_override);
 	if (director_mode != NONE)
 	{
 		director_set_mode(user_index, static_cast<e_director_mode>(director_mode));

@@ -10,7 +10,7 @@
 
 /* ---------- constants */
 
-enum e_controller_index
+enum e_controller_index : int32_t
 {
     _controller0 = 0,
     _controller1 = 1,

@@ -17,10 +17,19 @@
 #include "rex_macros.h"
 
 #include <imgui.h>
+
+#if defined(_WIN32)
 #include <hidusage.h>
 
 #include <Xinput.h>
 #pragma comment(lib, "XInput.lib")
+#else
+#include <rex/input/input_system.h>
+#include <rex/runtime.h>
+
+// the X_ERROR_* macros expand to the unqualified type
+using rex::X_RESULT;
+#endif
 
 /* ---------- constants */
 
@@ -34,12 +43,65 @@ constexpr real k_thumbstick_dead_zone = 0.24f;
 
 /* ---------- definitions */
 
+#if !defined(_WIN32)
+// There is no host XInput off Windows: read gamepads through the SDK's input system
+// (SDL, plus its keyboard/mouse emulation when `mnk_mode` is enabled) behind the same
+// XInput-shaped types, so the shared code in this file is unchanged.
+
+typedef uint8_t BYTE;
+typedef uint16_t WORD;
+typedef int16_t SHORT;
+
+struct XINPUT_GAMEPAD
+{
+	WORD wButtons;
+	BYTE bLeftTrigger;
+	BYTE bRightTrigger;
+	SHORT sThumbLX;
+	SHORT sThumbLY;
+	SHORT sThumbRX;
+	SHORT sThumbRY;
+};
+
+struct XINPUT_STATE
+{
+	uint32_t dwPacketNumber;
+	XINPUT_GAMEPAD Gamepad;
+};
+
+struct XINPUT_VIBRATION
+{
+	WORD wLeftMotorSpeed;
+	WORD wRightMotorSpeed;
+};
+
+enum : WORD
+{
+	XINPUT_GAMEPAD_DPAD_UP = rex::input::X_INPUT_GAMEPAD_DPAD_UP,
+	XINPUT_GAMEPAD_DPAD_DOWN = rex::input::X_INPUT_GAMEPAD_DPAD_DOWN,
+	XINPUT_GAMEPAD_DPAD_LEFT = rex::input::X_INPUT_GAMEPAD_DPAD_LEFT,
+	XINPUT_GAMEPAD_DPAD_RIGHT = rex::input::X_INPUT_GAMEPAD_DPAD_RIGHT,
+	XINPUT_GAMEPAD_START = rex::input::X_INPUT_GAMEPAD_START,
+	XINPUT_GAMEPAD_BACK = rex::input::X_INPUT_GAMEPAD_BACK,
+	XINPUT_GAMEPAD_LEFT_THUMB = rex::input::X_INPUT_GAMEPAD_LEFT_THUMB,
+	XINPUT_GAMEPAD_RIGHT_THUMB = rex::input::X_INPUT_GAMEPAD_RIGHT_THUMB,
+	XINPUT_GAMEPAD_LEFT_SHOULDER = rex::input::X_INPUT_GAMEPAD_LEFT_SHOULDER,
+	XINPUT_GAMEPAD_RIGHT_SHOULDER = rex::input::X_INPUT_GAMEPAD_RIGHT_SHOULDER,
+	XINPUT_GAMEPAD_A = rex::input::X_INPUT_GAMEPAD_A,
+	XINPUT_GAMEPAD_B = rex::input::X_INPUT_GAMEPAD_B,
+	XINPUT_GAMEPAD_X = rex::input::X_INPUT_GAMEPAD_X,
+	XINPUT_GAMEPAD_Y = rex::input::X_INPUT_GAMEPAD_Y,
+};
+
+constexpr uint32_t ERROR_SUCCESS = X_ERROR_SUCCESS;
+#endif
+
 struct input_globals_xenon
 {
 	bool initialized; // 0x0
 	bool suppressed_flag; // 0x1
 	bool rumble_suppressed_flag; // 0x2
-	rex::be<unsigned long> last_milliseconds; // 0x4
+	rex::be<uint32_t> last_milliseconds; // 0x4
 
 	rex::be<unsigned short> __flags; // 0x8
 
@@ -61,16 +123,18 @@ struct s_rawinput_state
 {
 	bool initialized;
 
+#if defined(_WIN32)
 	HWND window;
+#endif
 
 	bool key_down[NUMBER_OF_KEYS];
 	bool mouse_buttons[NUMBER_OF_MOUSE_BUTTONS];
-	long mouse_delta[NUMBER_OF_MOUSE_AXES];
+	int32_t mouse_delta[NUMBER_OF_MOUSE_AXES];
 };
 
 /* ---------- prototypes */
 
-static void input_update_gamepads(long elapsed_msec);
+static void input_update_gamepads(int32_t elapsed_msec);
 static void input_update_gamepads_rumble(void);
 
 static void update_threshold(unsigned char* threshold, bool down, unsigned char current_value);
@@ -78,12 +142,17 @@ static void update_trigger(unsigned char input, unsigned char* output);
 static void update_thumbstick(short input_x, short input_y, point2d* output);
 static void update_thumbstick(short input_x, short input_y, point2d_be* output);
 
-static bool gamepad_state_get(unsigned long gamepad_index, XINPUT_STATE* out_state);
+static bool gamepad_state_get(uint32_t gamepad_index, XINPUT_STATE* out_state);
 
 static bool input_rawinput_initialize(void);
 static void input_rawinput_poll(void);
+#if defined(_WIN32)
 static LRESULT CALLBACK input_rawinput_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 static void input_rawinput_process(RAWINPUT const* raw);
+#else
+static uint32_t XInputGetState(uint32_t user_index, XINPUT_STATE* out_state);
+static uint32_t XInputSetState(uint32_t user_index, XINPUT_VIBRATION* vibration);
+#endif
 
 /* ---------- globals */
 
@@ -432,13 +501,13 @@ REX_PPC_HOOK(input_update);
 
 /* ---------- public code */
 
-void update_button(unsigned char* frames, unsigned short* msec, bool down, unsigned long elapsed_msec)
+void update_button(unsigned char* frames, unsigned short* msec, bool down, uint32_t elapsed_msec)
 {
 	*frames = down ? MIN(*frames + 1, k_unsigned_char_max) : 0;
 	*msec = down ? MIN(*msec + elapsed_msec, k_unsigned_short_max) : 0;
 }
 
-void update_button(unsigned char* frames, rex::be<unsigned short>* msec, bool down, unsigned long elapsed_msec)
+void update_button(unsigned char* frames, rex::be<unsigned short>* msec, bool down, uint32_t elapsed_msec)
 {
 	*frames = down ? MIN(*frames + 1, k_unsigned_char_max) : 0;
 	*msec = down ? MIN(*msec + elapsed_msec, k_unsigned_short_max) : 0;
@@ -464,8 +533,8 @@ void input_update(void)
 
 	if (input_globals.initialized)
 	{
-		unsigned long time = system_milliseconds();
-		long elapsed_msec = static_cast<long>(CLAMP(time - input_globals.last_milliseconds, 0, 100));
+		uint32_t time = system_milliseconds();
+		int32_t elapsed_msec = static_cast<int32_t>(CLAMP(time - input_globals.last_milliseconds, 0, 100));
 
 		input_globals.suppressed_flag = false;
 		input_globals.last_milliseconds = time;
@@ -555,7 +624,7 @@ void input_set_gamepad_rumbler_state(short gamepad_index, unsigned short left_sp
 	}
 }
 
-bool input_update_gamepad(unsigned long gamepad_index, unsigned long elapsed_msec, gamepad_state_be* in_out_gamepad_state, debug_gamepad_data_be* out_debug_gamepad_data)
+bool input_update_gamepad(uint32_t gamepad_index, uint32_t elapsed_msec, gamepad_state_be* in_out_gamepad_state, debug_gamepad_data_be* out_debug_gamepad_data)
 {
 	(void)(out_debug_gamepad_data);
 	assert(in_out_gamepad_state != nullptr);
@@ -565,7 +634,7 @@ bool input_update_gamepad(unsigned long gamepad_index, unsigned long elapsed_mse
 	XINPUT_STATE xinput_state = {};
 	if (gamepad_state_get(gamepad_index, &xinput_state))
 	{
-		for (long button_index = FIRST_GAMEPAD_BINARY_BUTTON; button_index < NUMBER_OF_GAMEPAD_BUTTONS; button_index++)
+		for (int32_t button_index = FIRST_GAMEPAD_BINARY_BUTTON; button_index < NUMBER_OF_GAMEPAD_BUTTONS; button_index++)
 		{
 			bool const binary_down = TEST_MASK(xinput_state.Gamepad.wButtons, button_to_xinput_button_mask[button_index]);
 
@@ -582,7 +651,7 @@ bool input_update_gamepad(unsigned long gamepad_index, unsigned long elapsed_mse
 		update_trigger(xinput_state.Gamepad.bLeftTrigger,  &in_out_gamepad_state->analog_buttons[_gamepad_analog_button_left_trigger]);
 		update_trigger(xinput_state.Gamepad.bRightTrigger, &in_out_gamepad_state->analog_buttons[_gamepad_analog_button_right_trigger]);
 
-		for (long button_index = 0; button_index < NUMBER_OF_GAMEPAD_ANALOG_BUTTONS; button_index++)
+		for (int32_t button_index = 0; button_index < NUMBER_OF_GAMEPAD_ANALOG_BUTTONS; button_index++)
 		{
 			bool const binary_down = in_out_gamepad_state->analog_buttons[button_index] >
 							   in_out_gamepad_state->analog_button_thresholds[button_index];
@@ -609,7 +678,7 @@ bool input_update_gamepad(unsigned long gamepad_index, unsigned long elapsed_mse
 	return result;
 }
 
-void input_xinput_update_rumble_state(unsigned long user_index, rumble_state const* rumble_state, bool suppressed)
+void input_xinput_update_rumble_state(uint32_t user_index, rumble_state const* rumble_state, bool suppressed)
 {
 	assert(rumble_state != nullptr);
 
@@ -625,7 +694,7 @@ void input_xinput_update_rumble_state(unsigned long user_index, rumble_state con
 	}
 }
 
-void input_xinput_update_rumble_state(unsigned long user_index, rumble_state_be const* rumble_state, bool suppressed)
+void input_xinput_update_rumble_state(uint32_t user_index, rumble_state_be const* rumble_state, bool suppressed)
 {
 	assert(rumble_state != nullptr);
 
@@ -648,7 +717,7 @@ bool input_xinput_available(void)
 
 /* ---------- private code */
 
-static void input_update_gamepads(long elapsed_msec)
+static void input_update_gamepads(int32_t elapsed_msec)
 {
 	bool pc_joystick_enabled = REXCVAR_GET(enable_pc_joystick);
 	if (pc_joystick_enabled)
@@ -660,7 +729,7 @@ static void input_update_gamepads(long elapsed_msec)
 	for (e_controller_index controller_index = first_controller(); controller_index != k_no_controller; controller_index = next_controller(controller_index))
 	{
 		gamepad_state_be* state = &input_globals.gamepad_states[controller_index];
-		bool is_valid = input_update_gamepad(static_cast<unsigned long>(controller_index), static_cast<unsigned long>(elapsed_msec), state, nullptr);
+		bool is_valid = input_update_gamepad(static_cast<uint32_t>(controller_index), static_cast<uint32_t>(elapsed_msec), state, nullptr);
 
 		if (is_valid)
 		{
@@ -788,13 +857,21 @@ static void update_thumbstick(short input_x, short input_y, point2d_be* output)
 	output->y = static_cast<short>(thumbstick.j * scale_y);
 }
 
-static bool gamepad_state_get(unsigned long gamepad_index, XINPUT_STATE* out_state)
+static bool gamepad_state_get(uint32_t gamepad_index, XINPUT_STATE* out_state)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	bool const im_has_render_windows = io.MetricsRenderWindows > 0;
 
+#if defined(_WIN32)
+    bool const use_pc_joystick = REXCVAR_GET(enable_pc_joystick) && !im_has_render_windows;
+#else
+    // the raw-input keyboard/mouse path below is Win32-only; use the SDK's `mnk_mode` instead
+    bool const use_pc_joystick = false;
+    (void)im_has_render_windows;
+#endif
+
     bool result;
-    if (!REXCVAR_GET(enable_pc_joystick) || im_has_render_windows)
+    if (!use_pc_joystick)
     {
     	result = XInputGetState(gamepad_index, out_state) == ERROR_SUCCESS;
     }
@@ -810,7 +887,7 @@ static bool gamepad_state_get(unsigned long gamepad_index, XINPUT_STATE* out_sta
     		key_mapping = k_gamepad_in_game_key_mapping;
     	}
 
-        for (long button_index = 0; button_index < NUMBER_OF_GAMEPAD_BUTTONS; button_index++)
+        for (int32_t button_index = 0; button_index < NUMBER_OF_GAMEPAD_BUTTONS; button_index++)
         {
             e_input_key_code key_code = key_mapping[button_index];
             if (key_code != _key_not_a_key && rawinput_globals.key_down[key_code])
@@ -863,6 +940,8 @@ static bool gamepad_state_get(unsigned long gamepad_index, XINPUT_STATE* out_sta
 	}
     return result;
 }
+
+#if defined(_WIN32)
 
 static bool input_rawinput_initialize(void)
 {
@@ -998,3 +1077,60 @@ if (m.usButtonFlags & BUTTON_MASK) rawinput_globals.mouse_buttons[BUTTON_ENUM] =
 		}
 	}
 }
+
+#else
+
+static bool input_rawinput_initialize(void)
+{
+	return false;
+}
+
+static void input_rawinput_poll(void)
+{
+}
+
+static rex::input::InputSystem* host_input_system(void)
+{
+	rex::Runtime* runtime = rex::Runtime::instance();
+	return runtime != nullptr ? static_cast<rex::input::InputSystem*>(runtime->input_system()) : nullptr;
+}
+
+static uint32_t XInputGetState(uint32_t user_index, XINPUT_STATE* out_state)
+{
+	rex::input::InputSystem* input_system = host_input_system();
+	if (input_system == nullptr)
+	{
+		return X_ERROR_DEVICE_NOT_CONNECTED;
+	}
+
+	rex::input::X_INPUT_STATE state = {};
+	uint32_t result = input_system->GetState(user_index, &state);
+	if (result == X_ERROR_SUCCESS)
+	{
+		out_state->dwPacketNumber = state.packet_number;
+		out_state->Gamepad.wButtons = state.gamepad.buttons;
+		out_state->Gamepad.bLeftTrigger = state.gamepad.left_trigger;
+		out_state->Gamepad.bRightTrigger = state.gamepad.right_trigger;
+		out_state->Gamepad.sThumbLX = state.gamepad.thumb_lx;
+		out_state->Gamepad.sThumbLY = state.gamepad.thumb_ly;
+		out_state->Gamepad.sThumbRX = state.gamepad.thumb_rx;
+		out_state->Gamepad.sThumbRY = state.gamepad.thumb_ry;
+	}
+	return result;
+}
+
+static uint32_t XInputSetState(uint32_t user_index, XINPUT_VIBRATION* vibration)
+{
+	rex::input::InputSystem* input_system = host_input_system();
+	if (input_system == nullptr)
+	{
+		return X_ERROR_DEVICE_NOT_CONNECTED;
+	}
+
+	rex::input::X_INPUT_VIBRATION state = {};
+	state.left_motor_speed = vibration->wLeftMotorSpeed;
+	state.right_motor_speed = vibration->wRightMotorSpeed;
+	return input_system->SetState(user_index, &state);
+}
+
+#endif // _WIN32

@@ -16,9 +16,9 @@
 
 /* ---------- public code */
 
-unsigned long runtime_state_allocate_buffer(long size) // void*
+uint32_t runtime_state_allocate_buffer(int32_t size) // void*
 {
-    unsigned long result = _physical_memory_malloc(
+    uint32_t result = _physical_memory_malloc(
         _memory_stage_game_initialize,
         "runtime state (not game state)",
         size,
@@ -28,7 +28,7 @@ unsigned long runtime_state_allocate_buffer(long size) // void*
     return result;
 }
 
-void runtime_state_free_buffer(unsigned long buffer) // void*
+void runtime_state_free_buffer(uint32_t buffer) // void*
 {
     //physical_memory_free(buffer);
 }

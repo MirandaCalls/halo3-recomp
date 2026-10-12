@@ -1,6 +1,8 @@
 /* ---------- headers */
 
-#include "cseries\cseries_memory.h"
+#include "cseries/cseries_memory.h"
+
+#include <string.h>
 
 #include <cassert>
 #include <memory>

@@ -24,12 +24,12 @@ REX_PPC_EXTERN_IMPORT(havok_object_rebuild);
 
 /* ---------- public code */
 
-void havok_object_rebuild(long object_index)
+void havok_object_rebuild(int32_t object_index)
 {
     havok_object_rebuild(object_index, 0);
 }
 
-void havok_object_rebuild(long object_index, long flags)
+void havok_object_rebuild(int32_t object_index, int32_t flags)
 {
     REX_PPC_INVOKE2(void, havok_object_rebuild, object_index, flags);
 }

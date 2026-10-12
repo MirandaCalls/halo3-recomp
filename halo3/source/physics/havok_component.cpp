@@ -30,9 +30,9 @@ void midasm_hook__c_havok_component_build_physics_model_component(PPCRegister& r
 
 /* ---------- public code */
 
-long c_havok_component::rigid_body_motion_type_to_havok_motion_type(long rigid_body_motion_type)
+int32_t c_havok_component::rigid_body_motion_type_to_havok_motion_type(int32_t rigid_body_motion_type)
 {
-	long havok_motion_type;
+	int32_t havok_motion_type;
 	switch (rigid_body_motion_type)
 	{
 	case 0: // _rigid_body_motion_type_sphere

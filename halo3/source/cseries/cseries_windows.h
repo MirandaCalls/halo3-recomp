@@ -4,13 +4,15 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 /* ---------- constants */
 
 /* ---------- definitions */
 
 /* ---------- prototypes */
 
-extern unsigned long system_milliseconds();
+extern uint32_t system_milliseconds();
 
 /* ---------- globals */
 

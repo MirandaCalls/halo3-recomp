@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 /* ---------- constants */
 
 /* ---------- definitions */
@@ -18,12 +20,12 @@ extern void runtime_state_initialize();
 extern void runtime_state_dispose();
 extern void runtime_state_initialize_for_new_map();
 extern void runtime_state_dispose_from_old_map();
-extern unsigned long runtime_state_get_buffer_address(long* buffer_size); // void const*
+extern uint32_t runtime_state_get_buffer_address(int32_t* buffer_size); // void const*
 
 // runtime state windows
 
-extern unsigned long runtime_state_allocate_buffer(long size); // void*
-extern void runtime_state_free_buffer(unsigned long buffer); // void*
+extern uint32_t runtime_state_allocate_buffer(int32_t size); // void*
+extern void runtime_state_free_buffer(uint32_t buffer); // void*
 
 /* ---------- globals */
 

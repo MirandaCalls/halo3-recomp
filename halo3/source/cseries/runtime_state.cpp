@@ -16,9 +16,9 @@ struct s_runtime_state_globals
     bool locked; // 0x0
     bool fatal_error_recorded; // 0x1
     bool unused_flags[2]; // 0x2
-    unsigned long base_address; // 0x4, void*, ppc_pvoid_t
-    rex::be<long> allocated_size; // 0x8
-    rex::be<unsigned long> size_checksum; // 0xC
+    uint32_t base_address; // 0x4, void*, ppc_pvoid_t
+    rex::be<int32_t> allocated_size; // 0x8
+    rex::be<uint32_t> size_checksum; // 0xC
 };
 static_assert(sizeof(s_runtime_state_globals) == 0x10);
 
@@ -69,7 +69,7 @@ void runtime_state_dispose_from_old_map()
 {
 }
 
-unsigned long runtime_state_get_buffer_address(long* buffer_size) // void const*
+uint32_t runtime_state_get_buffer_address(int32_t* buffer_size) // void const*
 {
     assert(buffer_size != nullptr);
 

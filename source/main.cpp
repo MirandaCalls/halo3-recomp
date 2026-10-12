@@ -2,7 +2,6 @@
 //
 // This file is yours to edit. 'rexglue migrate' will NOT overwrite it.
 
-#include "generated/halo3_cache_release_config.h"
 #include "generated/halo3_cache_release_init.h"
 
 #include "halo3_cache_release_app.h"
@@ -17,19 +16,17 @@ REXCVAR_DEFINE_STRING(username, "User", "Rex/User", "override the users name");
 
 namespace rex::kernel::xam
 {
-	extern ppc_u32_result_t XamUserGetName_entry(ppc_u32_t user_index, ppc_pchar_t buffer,
-		ppc_u32_t buffer_len);
+	extern u32 XamUserGetName_entry(u32 user_index, mapped_string buffer, u32 buffer_len);
 }
 
-ppc_u32_result_t XUserGetName(ppc_u32_t user_index, ppc_pchar_t buffer,
-	ppc_u32_t buffer_len)
+u32 XUserGetName(u32 user_index, mapped_string buffer, u32 buffer_len)
 {
-	ppc_u32_result_t result;
+	u32 result;
 
 	auto username = REXCVAR_GET(username);
 	if (username[0] != 0)
 	{
-		rex::string::util_copy_truncating(buffer, username, std::min(buffer_len.value(), uint32_t(16)));
+		rex::string::copy_truncating(buffer, username, std::min(buffer_len, uint32_t(16)));
 
 		// X_E_SUCCESS
 		result = 0U;
@@ -43,6 +40,12 @@ ppc_u32_result_t XUserGetName(ppc_u32_t user_index, ppc_pchar_t buffer,
 REX_PPC_HOOK(XUserGetName);
 
 // networking
+//
+// These hooks pass the guest's Winsock calls straight through to the host's Winsock.
+// There is no Winsock on macOS/Linux (closesocket, ioctlsocket, WSA*, and a different
+// fd_set/sockaddr layout), so elsewhere the guest keeps using the SDK's kernel networking.
+
+#if defined(_WIN32)
 
 bool transport_network_available()
 {
@@ -73,6 +76,7 @@ REX_PPC_HOOK(sendto);
 REX_PPC_HOOK(inet_addr);
 REX_PPC_HOOK(WSAGetLastError);
 REX_PPC_HOOK(__WSAFDIsSet);
+#endif // _WIN32
 
 // hs
 //
@@ -167,7 +171,7 @@ struct hs_global_external
 {
 	char const* name;
 	e_hs_type type;
-	ppc_unknown_t pointer;
+	uint32_t pointer;
 };
 
 hs_global_external hs_external_globals[] =

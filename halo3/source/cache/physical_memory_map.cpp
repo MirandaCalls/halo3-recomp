@@ -12,16 +12,16 @@
 
 /* ---------- constants */
 
-constexpr unsigned long k_physical_memory_page_mask = MASK(16);
+constexpr uint32_t k_physical_memory_page_mask = MASK(16);
 
 /* ---------- definitions */
 
 struct s_physical_memory_stage
 {
-	rex::be<unsigned long> low_address; // 0x0
-	rex::be<unsigned long> high_address; // 0x4
+	rex::be<uint32_t> low_address; // 0x0
+	rex::be<uint32_t> high_address; // 0x4
 	rex::guest_addr_t next_available_zero_allocation; // 0x8 // char*
-	rex::be<unsigned long> allocation_count; // 0xC
+	rex::be<uint32_t> allocation_count; // 0xC
 };
 static_assert(sizeof(s_physical_memory_stage) == 0x10);
 
@@ -29,8 +29,8 @@ struct s_physical_memory_globals
 {
 	rex::guest_addr_t resize_region_listener; // 0x0 // c_physical_memory_contiguous_region_listener*
 	rex::be<memory_stage> current_stage; // 0x4
-	rex::be<unsigned long> minimum_address; // 0x8
-	rex::be<unsigned long> maximum_address; // 0xC
+	rex::be<uint32_t> minimum_address; // 0x8
+	rex::be<uint32_t> maximum_address; // 0xC
 	rex::guest_addr_t no_mans_land; // 0x10 // char*
 	c_static_array<s_physical_memory_stage, k_memory_stage_count> memory_stages; // 0x14
 };
@@ -74,7 +74,7 @@ void physical_memory_stage_pop(memory_stage stage)
 	REX_PPC_INVOKE(physical_memory_stage_pop, stage);
 }
 
-unsigned long _physical_memory_malloc(memory_stage stage, char const* name, unsigned long size, unsigned long flags, char const* file, long line) // void*
+uint32_t _physical_memory_malloc(memory_stage stage, char const* name, uint32_t size, uint32_t flags, char const* file, int32_t line) // void*
 {
 	return REX_PPC_INVOKE(_physical_memory_malloc, stage, name, size, flags, file, line);
 }

@@ -30,42 +30,42 @@ REX_PPC_EXTERN_IMPORT(utility_drive_initialize);
 
 // $IMPLEMENT utility functions
 
-_inline bool shell_has_utility_drive(void)
+inline bool shell_has_utility_drive(void)
 {
     return true;
 }
 
-_inline void shell_flush_utility_drive(void)
+inline void shell_flush_utility_drive(void)
 {
 }
 
-_inline void shell_flush_utility_drive_async(void)
+inline void shell_flush_utility_drive_async(void)
 {
 }
 
-_inline void shell_utility_drive_flush_path(s_file_reference const* file)
-{
-    (void)(file);
-}
-
-_inline void shell_utility_drive_flush_path(char const* file)
+inline void shell_utility_drive_flush_path(s_file_reference const* file)
 {
     (void)(file);
 }
 
-_inline bool shell_file_is_utility_drive_path(s_file_reference const* file)
+inline void shell_utility_drive_flush_path(char const* file)
+{
+    (void)(file);
+}
+
+inline bool shell_file_is_utility_drive_path(s_file_reference const* file)
 {
     (void)(file);
     return false;
 }
 
-_inline bool shell_file_is_utility_drive_path(char const* file_name)
+inline bool shell_file_is_utility_drive_path(char const* file_name)
 {
     (void)(file_name);
     return false;
 }
 
-_inline bool shell_utility_drive_was_cleared_on_startup(void)
+inline bool shell_utility_drive_was_cleared_on_startup(void)
 {
     return false;
 }

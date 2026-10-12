@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 #include "game/game_options.h"
 #include "cseries/cseries_macros.h"
 
@@ -13,7 +15,7 @@
 
 #define WAIT_FOR_RENDER_THREAD() c_wait_for_render_thread CONCATX(__render_thread_lock_, __LINE__)(__FILE__, __LINE__)
 
-enum e_map_memory_configuration
+enum e_map_memory_configuration : int32_t
 {
 	_map_memory_configuration_none = 0,
 	_map_memory_configuration_main_menu,
@@ -37,11 +39,11 @@ enum
 
 /* ---------- definitions */
 
-typedef unsigned long unlock_token;
+typedef uint32_t unlock_token;
 class c_wait_for_render_thread
 {
 public:
-	c_wait_for_render_thread(char const* file, long line);
+	c_wait_for_render_thread(char const* file, int32_t line);
 	~c_wait_for_render_thread(void);
 private:
 	unlock_token m_token;
@@ -56,7 +58,7 @@ extern bool& disable_main_loop_throttle;
 
 /* ---------- public code */
 
-extern unlock_token _internal_halt_render_thread_and_lock_resources(char const* file, long line);
+extern unlock_token _internal_halt_render_thread_and_lock_resources(char const* file, int32_t line);
 extern void unlock_resources_and_resume_render_thread(unlock_token token);
 extern void main_loop(void);
 

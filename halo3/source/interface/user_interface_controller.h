@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 #include "cseries/cseries_macros.h"
 
 /* ---------- constants */
@@ -28,17 +30,17 @@ extern void user_interface_queue_event(s_event_record const* event);
 extern void user_interface_controller_update();
 extern void user_interface_controller_event_manager_suppress(bool suppress);
 extern bool user_interface_controller_connected(e_controller_index controller_index);
-extern long user_interface_controller_get_user_index(e_controller_index controller_index);
-extern void user_interface_controller_set_user_index(e_controller_index controller_index, long user_index);
-extern e_controller_index user_interface_controller_get_controller_for_user(long user_index);
+extern int32_t user_interface_controller_get_user_index(e_controller_index controller_index);
+extern void user_interface_controller_set_user_index(e_controller_index controller_index, int32_t user_index);
+extern e_controller_index user_interface_controller_get_controller_for_user(int32_t user_index);
 extern short user_interface_controller_get_signed_in_controller_count();
 extern short user_interface_controller_get_signed_in_non_guest_controller_count();
-extern void user_interface_controller_set_desired_team_index(e_controller_index controller_index, long desired_team_index);
-extern long user_interface_controller_get_team_index(e_controller_index controller_index);
+extern void user_interface_controller_set_desired_team_index(e_controller_index controller_index, int32_t desired_team_index);
+extern int32_t user_interface_controller_get_team_index(e_controller_index controller_index);
 extern void user_interface_controller_set_griefer(e_controller_index controller_index, bool griefer);
 extern bool user_interface_controller_get_griefer(e_controller_index controller_index, bool griefer);
-extern void user_interface_controller_set_bungienet_user(e_controller_index controller_index, unsigned long bungienet_user_flags);
-extern unsigned long user_interface_controller_get_bungienet_user(e_controller_index controller_index);
+extern void user_interface_controller_set_bungienet_user(e_controller_index controller_index, uint32_t bungienet_user_flags);
+extern uint32_t user_interface_controller_get_bungienet_user(e_controller_index controller_index);
 extern void user_interface_controller_set_hopper_access(e_controller_index controller_index, unsigned char hopper_access_flags);
 extern unsigned char user_interface_controller_get_hopper_access(e_controller_index controller_index);
 extern bool user_interface_controller_get_notification_pending(e_controller_index controller_index);
@@ -62,8 +64,8 @@ extern bool user_interface_controller_is_anyone_signed_into_xbox_live();
 extern bool user_interface_controller_get_rumble_enabled(e_controller_index controller_index);
 extern bool user_interface_controller_get_impulse_triggers_enabled(e_controller_index controller_index);
 extern bool user_interface_controller_get_autolevel_enabled(e_controller_index controller_index);
-extern wchar_t const* user_interface_controller_get_player_profile_name(e_controller_index controller_index);
-extern long user_interface_get_player_last_used_hopper(e_controller_index controller_index);
+extern char16_t const* user_interface_controller_get_player_profile_name(e_controller_index controller_index);
+extern int32_t user_interface_get_player_last_used_hopper(e_controller_index controller_index);
 extern void user_interface_set_player_last_used_hopper(e_controller_index controller_index, unsigned short hopper_identifier);
 extern void user_interface_set_last_campaign_level(e_campaign_id campaign_id, e_map_id map_id);
 extern void user_interface_controller_hack_invert_look_all_controllers();
@@ -80,7 +82,7 @@ extern inline bool dpad_button_tabbed(bool tab_is_vertical, unsigned char button
 extern void user_interface_controller_reset(e_controller_index controller_index);
 extern void user_interface_controller_switch_to_offline(e_controller_index controller_index);
 extern void user_interface_get_last_campaign_level(e_campaign_id* campaign_id, e_map_id* map_id);
-extern char* user_interface_get_last_campaign_level_path(char* path, long maximum_characters);
+extern char* user_interface_get_last_campaign_level_path(char* path, int32_t maximum_characters);
 
 /* ---------- globals */
 

@@ -4,9 +4,11 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 /* ---------- constants */
 
-const unsigned long k_runtime_state_size = 0x23000;
+const uint32_t k_runtime_state_size = 0x23000;
 
 /* ---------- definitions */
 

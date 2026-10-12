@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stddef.h>
+
 /* ---------- constants */
 
 /* ---------- definitions */

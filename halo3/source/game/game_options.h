@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 #include "cseries/platform.h"
 
 #include "rex_macros.h"
@@ -53,7 +55,7 @@ struct s_player_appearance
 	unsigned char player_model_choice; // 0x3
 	s_emblem_info emblem_info; // 0x4
 	unsigned char model_permutations[2][4]; // 0xC
-	wchar_t service_tag[4]; // 0x14
+	char16_t service_tag[4]; // 0x14
 
 	char __data[4]; // 0x1C
 };
@@ -63,9 +65,9 @@ static_assert(sizeof(s_player_appearance) == 0x20);
 struct s_queried_player_global_statistics
 {
 	bool valid; // 0x0
-	rex::be<long> experience_base; // 0x4
-	rex::be<long> experience_penalty; // 0x8
-	rex::be<long> highest_skill; // 0xC
+	rex::be<int32_t> experience_base; // 0x4
+	rex::be<int32_t> experience_penalty; // 0x8
+	rex::be<int32_t> highest_skill; // 0xC
 };
 static_assert(sizeof(s_queried_player_global_statistics) == 0x10);
 
@@ -73,16 +75,16 @@ static_assert(sizeof(s_queried_player_global_statistics) == 0x10);
 struct s_queried_player_displayed_statistics
 {
 	bool stats_valid; // 0x0
-	rex::be<long> ranked_played; // 0x4
-	rex::be<long> ranked_completed; // 0x8
-	rex::be<long> ranked_win; // 0xC
-	rex::be<long> unranked_played; // 0x10
-	rex::be<long> unranked_completed; // 0x14
-	rex::be<long> unranked_win; // 0x18
-	rex::be<long> custom_played; // 0x1C
-	rex::be<long> custom_completed; // 0x20
-	rex::be<unsigned long> custom_win; // 0x24
-	rex::be<unsigned long> last_played; // 0x28
+	rex::be<int32_t> ranked_played; // 0x4
+	rex::be<int32_t> ranked_completed; // 0x8
+	rex::be<int32_t> ranked_win; // 0xC
+	rex::be<int32_t> unranked_played; // 0x10
+	rex::be<int32_t> unranked_completed; // 0x14
+	rex::be<int32_t> unranked_win; // 0x18
+	rex::be<int32_t> custom_played; // 0x1C
+	rex::be<int32_t> custom_completed; // 0x20
+	rex::be<uint32_t> custom_win; // 0x24
+	rex::be<uint32_t> last_played; // 0x28
 };
 static_assert(sizeof(s_queried_player_displayed_statistics) == 0x2C);
 
@@ -93,10 +95,10 @@ struct s_queried_player_hopper_statistics
 	rex::be<unsigned short> identifier; // 0x2
 	rex::be<float> mu; // 0x4
 	rex::be<float> sigma; // 0x8
-	rex::be<long> old_skill; // 0xC
-	rex::be<long> games_played; // 0x10
-	rex::be<long> games_completed; // 0x14
-	rex::be<long> games_won; // 0x18
+	rex::be<int32_t> old_skill; // 0xC
+	rex::be<int32_t> games_played; // 0x10
+	rex::be<int32_t> games_completed; // 0x14
+	rex::be<int32_t> games_won; // 0x18
 };
 static_assert(sizeof(s_queried_player_hopper_statistics) == 0x1C);
 
@@ -112,7 +114,7 @@ static_assert(sizeof(s_queried_player_statistics) == 0x58);
 // $TODO move to game/players.h
 struct s_player_configuration_from_client
 {
-	wchar_t desired_name[32]; // 0x0
+	char16_t desired_name[32]; // 0x0
 	s_player_appearance appearance; // 0x40
 	rex::be<unsigned long long> player_xuid; // 0x60
 	bool is_silver_or_gold_live; // 0x68
@@ -127,11 +129,11 @@ struct s_player_configuration_from_client
 	unsigned char bungienet_user_flags; // 0x71
 	char campaign_completion; // 0x72
 	char campaign_percentage; // 0x73
-	rex::be<long> gamer_region; // 0x74
-	rex::be<long> gamer_zone; // 0x78
-	rex::be<unsigned long> cheat_flags; // 0x7C
-	rex::be<unsigned long> ban_flags; // 0x80
-	rex::be<long> repeated_play_coefficient; // 0x84
+	rex::be<int32_t> gamer_region; // 0x74
+	rex::be<int32_t> gamer_zone; // 0x78
+	rex::be<uint32_t> cheat_flags; // 0x7C
+	rex::be<uint32_t> ban_flags; // 0x80
+	rex::be<int32_t> repeated_play_coefficient; // 0x84
 	bool experience_growth_banned; // 0x88
 	s_queried_player_statistics queried_stats; // 0x8C
 };
@@ -141,7 +143,7 @@ static_assert(sizeof(s_player_configuration_from_client) == 0xE8);
 struct s_calculated_player_global_statistics
 {
 	bool valid; // 0x0
-	rex::be<long> experience; // 0x4
+	rex::be<int32_t> experience; // 0x4
 	rex::be<e_experience_rank> rank; // 0x8
 	rex::be<e_experience_grade> grade; // 0xC
 };
@@ -151,9 +153,9 @@ static_assert(sizeof(s_calculated_player_global_statistics) == 0x10);
 struct s_calculated_player_hopper_statistics
 {
 	bool valid; // 0x0
-	rex::be<long> skill; // 0x4
-	rex::be<long> skill_to_display; // 0x8
-	rex::be<long> skill_update_weight; // 0xC
+	rex::be<int32_t> skill; // 0x4
+	rex::be<int32_t> skill_to_display; // 0x8
+	rex::be<int32_t> skill_update_weight; // 0xC
 };
 static_assert(sizeof(s_calculated_player_hopper_statistics) == 0x10);
 
@@ -168,7 +170,7 @@ static_assert(sizeof(s_calculated_player_statistics) == 0x20);
 // $TODO move to game/players.h
 struct s_player_configuration_from_host
 {
-	rex::be<long> team_index; // 0x0
+	rex::be<int32_t> team_index; // 0x0
 	s_calculated_player_statistics player_statistics; // 0x4
 
 	char __data[4]; // 0x24
@@ -207,12 +209,12 @@ struct s_game_matchmaking_options
 	bool hopper_ranked; // 0x3
 	bool team_game; // 0x4
 	char pad[1]; // 0x5
-	wchar_t hopper_name[32]; // 0x6
-	rex::be<long> draw_probability; // 0x48
+	char16_t hopper_name[32]; // 0x6
+	rex::be<int32_t> draw_probability; // 0x48
 	rex::be<float> beta; // 0x4C
 	rex::be<float> tau; // 0x50
-	rex::be<long> experience_base_increment; // 0x54
-	rex::be<long> experience_penalty_decrement; // 0x58
+	rex::be<int32_t> experience_base_increment; // 0x54
+	rex::be<int32_t> experience_penalty_decrement; // 0x58
 };
 static_assert(sizeof(s_game_matchmaking_options) == 92);
 
@@ -232,7 +234,7 @@ static_assert(sizeof(game_player_options) == 0x168);
 
 struct game_machine_options
 {
-	unsigned long machine_valid_mask; // 0x0
+	uint32_t machine_valid_mask; // 0x0
 	s_machine_identifier machine_identifiers[16]; // 0x4
 	bool local_machine_exists; // 0x64
 	s_machine_identifier local_machine_identifier; // 0x65
@@ -241,12 +243,12 @@ static_assert(sizeof(game_machine_options) == 0x6C);
 
 struct game_options
 {
-	rex::be<long> game_mode; // 0x0
+	rex::be<int32_t> game_mode; // 0x0
 	char game_simulation; // 0x4
 	char game_network_type; // 0x5
 	rex::be<short> game_tick_rate; // 0x6
 	rex::be<unsigned long long> game_instance; // 0x8
-	rex::be<unsigned long> random_seed; // 0x10
+	rex::be<uint32_t> random_seed; // 0x10
 	rex::be<e_campaign_id> campaign_id; // 0x14
 	rex::be<e_map_id> map_id; // 0x18
 	char scenario_path[260]; // 0x1C

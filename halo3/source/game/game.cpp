@@ -33,9 +33,9 @@ struct game_globals_storage
 	bool __unknown2; // 0x2
 	bool __unknown3; // 0x3
 
-	rex::be<unsigned long> active_structure_bsp_mask; // 0x4
-	rex::be<unsigned long> active_designer_zone_mask; // 0x8
-	rex::be<unsigned long> active_cinematic_zone_mask; // 0xC
+	rex::be<uint32_t> active_structure_bsp_mask; // 0x4
+	rex::be<uint32_t> active_designer_zone_mask; // 0x8
+	rex::be<uint32_t> active_cinematic_zone_mask; // 0xC
 	game_options options; // 0x10
 	bool game_in_progress; // 0xD310
 	bool game_lost; // 0xD311
@@ -43,15 +43,15 @@ struct game_globals_storage
 
 	bool __unknownD313; // 0xD313
 
-	rex::be<long> game_loss_timer; // 0xD314
+	rex::be<int32_t> game_loss_timer; // 0xD314
 	bool game_finished; // 0xD318
 
 	bool __unknownD319; // 0xD319
 	bool __unknownD31A; // 0xD31A
 	bool __unknownD31B; // 0xD31B
 
-	rex::be<long> game_finished_timer; // 0xD31C
-	rex::be<long> game_ragdoll_count; // 0xD320
+	rex::be<int32_t> game_finished_timer; // 0xD31C
+	rex::be<int32_t> game_ragdoll_count; // 0xD320
 	s_game_cluster_bit_vectors cluster_pvs; // 0xD324
 	s_game_cluster_bit_vectors cluster_pvs_local; // 0xD524
 	s_game_cluster_bit_vectors cluster_activation; // 0xD724
@@ -68,7 +68,7 @@ struct game_globals_storage
 	rex::be<short> pvs_activation_type; // 0xD92A
 	union
 	{
-		rex::be<long> object_index; // 0x0
+		rex::be<int32_t> object_index; // 0x0
 		s_cluster_reference cluster_reference; // 0x0
 	} pvs_activation; // 0xD92C
 };

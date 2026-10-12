@@ -25,7 +25,7 @@ REX_PPC_EXTERN_IMPORT(object_get_origin);
 
 /* ---------- public code */
 
-real_point3d* object_get_origin(long object_index, real_point3d* origin)
+real_point3d* object_get_origin(int32_t object_index, real_point3d* origin)
 {
 	return REX_PPC_INVOKE(object_get_origin, object_index, origin);
 }

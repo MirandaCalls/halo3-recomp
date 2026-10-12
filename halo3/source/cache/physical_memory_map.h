@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 /* ---------- constants */
 
 enum memory_stage
@@ -25,7 +27,7 @@ enum memory_stage
 
 extern void physical_memory_stage_push(memory_stage stage);
 extern void physical_memory_stage_pop(memory_stage stage);
-extern unsigned long _physical_memory_malloc(memory_stage stage, char const* name, unsigned long size, unsigned long flags, char const* file, long line); // void*
+extern uint32_t _physical_memory_malloc(memory_stage stage, char const* name, uint32_t size, uint32_t flags, char const* file, int32_t line); // void*
 
 /* ---------- globals */
 

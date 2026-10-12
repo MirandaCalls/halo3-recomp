@@ -13,7 +13,7 @@
 REX_PPC_EXTERN_IMPORT(scenario_switch_zone_set_internal);
 REX_PPC_EXTERN_IMPORT(scenario_unload);
 
-static bool scenario_switch_zone_set_internal(long new_zone_set_index, bool unload_old_bsps);
+static bool scenario_switch_zone_set_internal(int32_t new_zone_set_index, bool unload_old_bsps);
 
 /* ---------- globals */
 
@@ -21,12 +21,12 @@ static bool scenario_switch_zone_set_internal(long new_zone_set_index, bool unlo
 
 /* ---------- public code */
 
-bool scenario_switch_zone_set(long zone_set_index)
+bool scenario_switch_zone_set(int32_t zone_set_index)
 {
 	return scenario_switch_zone_set_internal(zone_set_index, true);
 }
 
-static bool scenario_switch_zone_set_internal(long new_zone_set_index, bool unload_old_bsps)
+static bool scenario_switch_zone_set_internal(int32_t new_zone_set_index, bool unload_old_bsps)
 {
 	return REX_PPC_INVOKE(scenario_switch_zone_set_internal, new_zone_set_index, unload_old_bsps);
 }

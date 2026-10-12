@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 /* ---------- constants */
 
 enum string_id_namespaces
@@ -20,16 +22,16 @@ enum string_id_namespaces
 	k_string_id_namespace_count,
 };
 
-const long _string_id_invalid = -1;
-const long _string_id_empty_string = 0;
+const int32_t _string_id_invalid = -1;
+const int32_t _string_id_empty_string = 0;
 
-const long k_string_id_namespace_bits = 14;
-const long k_string_id_index_bits = 16;
-const long k_string_id_index_mask = 65535;
-const long k_string_id_length_shift = 30;
-const long k_tag_string_id_length = 128;
-const long k_maximum_string_ids = 36864;
-const long k_maximum_string_id_namespaces = 256;
+const int32_t k_string_id_namespace_bits = 14;
+const int32_t k_string_id_index_bits = 16;
+const int32_t k_string_id_index_mask = 65535;
+const int32_t k_string_id_length_shift = 30;
+const int32_t k_tag_string_id_length = 128;
+const int32_t k_maximum_string_ids = 36864;
+const int32_t k_maximum_string_id_namespaces = 256;
 
 #define STRING_ID_FIRST(NAMESPACE) k_string_id_namespace_##NAMESPACE##_first = (_string_id_namespace_##NAMESPACE << k_string_id_index_bits) - 1
 #define STRING_ID_ENTRY(NAMESPACE, NAME) _string_id_##NAMESPACE##__##NAME
@@ -38,7 +40,7 @@ const long k_maximum_string_id_namespaces = 256;
 
 /* ---------- definitions */
 
-typedef long string_id;
+typedef int32_t string_id;
 
 /* ---------- prototypes */
 

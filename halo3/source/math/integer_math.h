@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 #include "rex_macros.h"
 
 /* ---------- constants */
@@ -42,7 +44,7 @@ enum
 
 typedef unsigned char byte;
 typedef unsigned short word;
-typedef unsigned long dword;
+typedef uint32_t dword;
 typedef unsigned long long qword;
 typedef __int128 oword;
 
@@ -88,36 +90,36 @@ static_assert(sizeof(point2d) == 0x4);
 
 union long_point2d
 {
-	long n[2];
+	int32_t n[2];
 	struct
 	{
-		long x;
-		long y;
+		int32_t x;
+		int32_t y;
 	};
 };
 static_assert(sizeof(long_point2d) == 0x8);
 
 union long_point3d
 {
-	long n[3];
+	int32_t n[3];
 	struct
 	{
-		long x;
-		long y;
-		long z;
+		int32_t x;
+		int32_t y;
+		int32_t z;
 	};
 };
 static_assert(sizeof(long_point3d) == 0xC);
 
 union long_point4d
 {
-	long n[4];
+	int32_t n[4];
 	struct
 	{
-		long x;
-		long y;
-		long z;
-		long w;
+		int32_t x;
+		int32_t y;
+		int32_t z;
+		int32_t w;
 	};
 };
 static_assert(sizeof(long_point4d) == 0x10);
@@ -153,29 +155,29 @@ static_assert(sizeof(rectangle2d) == 0x8);
 
 union long_rectangle2d
 {
-	long n[4];
-	long m[2][2];
+	int32_t n[4];
+	int32_t m[2][2];
 	struct
 	{
-		long y0;
-		long x0;
-		long y1;
-		long x1;
+		int32_t y0;
+		int32_t x0;
+		int32_t y1;
+		int32_t x1;
 	};
 };
 static_assert(sizeof(long_rectangle2d) == 0x10);
 
 union long_rectangle3d
 {
-	long n[6];
+	int32_t n[6];
 	struct
 	{
-		long x0;
-		long y0;
-		long z0;
-		long x1;
-		long y1;
-		long z1;
+		int32_t x0;
+		int32_t y0;
+		int32_t z0;
+		int32_t x1;
+		int32_t y1;
+		int32_t z1;
 	};
 };
 static_assert(sizeof(long_rectangle3d) == 0x18);

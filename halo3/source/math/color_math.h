@@ -4,6 +4,8 @@
 
 /* ---------- headers */
 
+#include <stdint.h>
+
 #include "math/real_math.h"
 
 /* ---------- constants */
@@ -39,13 +41,13 @@ enum e_global_color
 
 /* ---------- definitions */
 
-typedef unsigned long pixel32;
-typedef unsigned long logluv32;
+typedef uint32_t pixel32;
+typedef uint32_t logluv32;
 
 union byte_abgr_color
 {
 	unsigned char n[4];
-	unsigned long integer;
+	uint32_t integer;
 	struct
 	{
 		unsigned char alpha;
@@ -133,7 +135,7 @@ static_assert(sizeof(half_rgb_color) == 0x6);
 union byte_argb_color
 {
 	unsigned char n[4];
-	unsigned long integer;
+	uint32_t integer;
 	struct
 	{
 		unsigned char alpha;
@@ -154,7 +156,7 @@ static_assert(sizeof(byte_argb_color) == 0x4);
 union byte_rgba_color
 {
 	unsigned char n[4];
-	unsigned long integer;
+	uint32_t integer;
 	struct
 	{
 		union
@@ -388,7 +390,7 @@ static_assert(sizeof(real_xyz_radiance) == 0xC);
 
 struct s_faux_logluv_lightprobe
 {
-	unsigned long terms[9];
+	uint32_t terms[9];
 };
 static_assert(sizeof(s_faux_logluv_lightprobe) == 0x24);
 
