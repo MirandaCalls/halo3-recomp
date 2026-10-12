@@ -62,6 +62,17 @@ Useful launcher flags: `--instance N` (several instances on one PC),
 `--ip ADDR` (pick the system-link interface), `--native` (experimental native
 renderer), `--fps`, `--scale N`, `--help`.
 
+If the game aborts with "Call to invalid or unregistered function" somewhere the
+setup's automatic runs never reached (it only plays the boot and menu), play to
+that point with a log, then add the missing functions and rebuild:
+
+```bash
+./play-halo3.sh --name YourName -- --log_file="$PWD/halo3.log"
+tools/add-missed-functions.sh halo3.log
+```
+
+Repeat until it gets past that point; each crash names one more function.
+
 ## ZeroTier notes
 
 Both machines only need to join the same ZeroTier network — no port
