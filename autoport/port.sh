@@ -31,7 +31,9 @@ else
 fi
 
 mkdir -p "$WORK"
-[ -f "$WORK/game/default.xex" ] || "$XISO" -x "$ISO" -d "$WORK/game"
+# Options before the ISO: macOS getopt stops at the first non-option argument, so a
+# trailing -d would be taken for a second ISO.
+[ -f "$WORK/game/default.xex" ] || "$XISO" -d "$WORK/game" -x "$ISO"
 
 if [ ! -f "$PORT/${NAME}_manifest.toml" ]; then
   "$REXGLUE" init --project-name "$NAME" --xex-path "$WORK/game/default.xex" \
