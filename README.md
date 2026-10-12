@@ -111,7 +111,10 @@ What differs from the Linux path:
   support. It also fixes a race in the SDK's `XThread` startup, where a new thread
   and its creator could write the thread's name at once and corrupt the heap
   (macOS aborts with "pointer being freed was not allocated").
-  Finally, it adds per-render-pass GPU timing (see below).
+  It turns off 16-bit gamma render targets by default on macOS
+  (`gamma_render_target_as_unorm16`), which cost about 4 ms of GPU time per frame
+  on an M3 with no visible difference. Finally, it adds per-render-pass GPU timing
+  (see below).
 - The runtime fix-up loop (`autoport/runtime_loop.py`) opens a real window on
   macOS rather than SDL's offscreen driver.
 - `--zt` finds the ZeroTier address on the `feth*` interfaces macOS uses.
@@ -134,6 +137,11 @@ frame:
 AUTOPORT_GPU_TIMING_LOG=$PWD/gpu-timing.log ./play-halo3.sh --name <gamertag>
 awk -v from=25 -f tools/gpu-timing-summary.awk gpu-timing.log   # skip the boot logos
 ```
+
+Adding `AUTOPORT_GPU_TIMING_PER_DRAW=1` gives every guest draw its own render pass
+and labels it with its vertex and pixel shader hashes (as in `--dump_shaders` file
+names), and the summary then ranks pixel shaders by GPU time. The extra passes
+inflate the totals, so use it to rank draws, not to measure the frame rate.
 
 ## Legal
 

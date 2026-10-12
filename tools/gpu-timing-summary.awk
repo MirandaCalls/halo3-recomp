@@ -30,6 +30,14 @@ NF < 8 || $1 < from { next }
   if (!(key in g_ms)) keys[nkeys++] = key
   g_ms[key] += ms; g_n[key]++; g_draws[key] += $7
   if (ms > g_max[key]) g_max[key] = ms
+  # per-draw logs: group the game's draws by pixel shader too
+  if ($3 == "D" && match($8, /,ps=[0-9A-F]+/)) {
+    ps = substr($8, RSTART + 4, RLENGTH - 4)
+    if (!(ps in p_ms)) pkeys[npkeys++] = ps
+    p_ms[ps] += ms; p_n[ps]++
+    if (ms > p_max[ps]) p_max[ps] = ms
+    if (match($8, /,v=[0-9]+/)) p_verts[ps] += substr($8, RSTART + 3, RLENGTH - 3)
+  }
   # five longest single passes
   for (i = 0; i < 5; i++) if (ms > top_ms[i]) break
   if (i < 5) {
@@ -58,6 +66,17 @@ END {
     used[best] = 1; k = keys[best]; split(k, f, " ")
     printf "  %8.2f %5.1f%% %8.1f %8.3f %8.3f  %s %s %.0f %s\n", g_ms[k] / frames, 100 * g_ms[k] / total,
            g_n[k] / frames, g_ms[k] / g_n[k], g_max[k], f[1], f[2], g_draws[k] / g_n[k], f[3]
+  }
+  if (npkeys) {
+    print "\nper-draw mode, game draws by pixel shader (times inflated by the extra passes):"
+    printf "  %8s %6s %8s %8s %8s %8s  %s\n", "ms/frame", "share", "n/frame", "avg ms", "max ms", "avg vert", "pixel shader"
+    for (r = 0; r < 20 && r < npkeys; r++) {
+      best = -1
+      for (i = 0; i < npkeys; i++) if (!(i in pused) && (best < 0 || p_ms[pkeys[i]] > p_ms[pkeys[best]])) best = i
+      pused[best] = 1; k = pkeys[best]
+      printf "  %8.2f %5.1f%% %8.1f %8.3f %8.3f %8.0f  %s\n", p_ms[k] / frames, 100 * p_ms[k] / total,
+             p_n[k] / frames, p_ms[k] / p_n[k], p_max[k], p_verts[k] / p_n[k], (k == "0000000000000000") ? "none (depth only)" : k
+    }
   }
   if (nwkeys) {
     print "\ntime between passes by the work recorded there:"
