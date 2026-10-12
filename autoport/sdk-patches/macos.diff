@@ -83,3 +83,38 @@ index 44aa9e2..62d2f73 100644
    SCOPE_profile_cpu_f("gpu");
    vertex_buffers_in_sync_[0] = 0;
    vertex_buffers_in_sync_[1] = 0;
+diff --git a/src/system/xthread.cpp b/src/system/xthread.cpp
+index 77bce25..53684bc 100644
+--- a/src/system/xthread.cpp
++++ b/src/system/xthread.cpp
+@@ -439,8 +439,14 @@ X_STATUS XThread::Create() {
+     // Set thread ID override. This is used by logging.
+     rex::thread::set_current_thread_id(handle());
+ 
+-    // Set name immediately, if we have one.
+-    thread_->set_name(thread_name_);
++    // Set name immediately, if we have one. Under thread_lock_: the creating
++    // thread may be naming us through XThread::set_name at the same moment, and
++    // two unsynchronized writes to the name string corrupt the heap (seen on
++    // macOS as "pointer being freed was not allocated" in PosixThread::set_name).
++    {
++      std::lock_guard<std::mutex> lock(thread_lock_);
++      thread_->set_name(thread_name_);
++    }
+ 
+     PROFILE_THREAD_ENTER(thread_name_.c_str());
+     PROFILE_THREAD_CREATED();
+@@ -1397,8 +1403,11 @@ object_ref<XThread> XThread::Restore(KernelState* kernel_state, stream::ByteStre
+       rex::thread::set_current_thread_id(thread->handle());
+       runtime::ThreadState::Bind(thread->thread_state_.get());
+ 
+-      // Set name immediately, if we have one.
+-      thread->thread_->set_name(thread->name());
++      // Set name immediately, if we have one (locked as in XThread::Create).
++      {
++        std::lock_guard<std::mutex> lock(thread->thread_lock_);
++        thread->thread_->set_name(thread->name());
++      }
+ 
+       PROFILE_THREAD_ENTER(thread->name().c_str());
+ 

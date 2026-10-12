@@ -108,7 +108,9 @@ What differs from the Linux path:
   capture memory dump) with `mach_vm_read_overwrite`, makes the native
   renderer's `--no-undefined` link flag ld64-compatible, and compiles out the
   RenderDoc frame-capture hooks (`AUTOPORT_RDOC_*`), whose header has no macOS
-  support.
+  support. It also fixes a race in the SDK's `XThread` startup, where a new thread
+  and its creator could write the thread's name at once and corrupt the heap
+  (macOS aborts with "pointer being freed was not allocated").
 - The runtime fix-up loop (`autoport/runtime_loop.py`) opens a real window on
   macOS rather than SDL's offscreen driver.
 - `--zt` finds the ZeroTier address on the `feth*` interfaces macOS uses.
