@@ -64,8 +64,10 @@ step "ReXGlue v0.10.0 + patch"
 mkdir -p "$ROOT/ref"
 if [ ! -d "$SRC/.git" ]; then
   git clone --branch v0.10.0 https://github.com/rexglue/rexglue-sdk.git "$SRC"
-  git -C "$SRC" submodule update --init --recursive
 fi
+# Every run, not just after the clone: resumes an interrupted submodule checkout,
+# and is a quick no-op once everything is there.
+git -C "$SRC" submodule update --init --recursive
 # MACOS_PATCH edits lines PATCH adds, so check it first: once it reverses cleanly,
 # both are in.
 if git -C "$SRC" apply --reverse --check "$MACOS_PATCH" 2>/dev/null; then
