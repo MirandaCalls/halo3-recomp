@@ -159,7 +159,7 @@ inflate the totals, so use it to rank draws, not to measure the frame rate.
 
 `./play-halo3.sh --metal-capture` captures frames without a debugger (Xcode's
 debugger stops on the faults the runtime uses to watch GPU memory). While playing,
-`touch metal-captures/capture` saves the next frame as
+`touch metal-captures/capture` saves the next 3 frames as
 `metal-captures/frame-<n>.gputrace`, which Xcode opens with pixel history and
 shader debugging.
 

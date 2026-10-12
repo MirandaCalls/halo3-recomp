@@ -9,7 +9,7 @@
 #                  AUTOPORT_FPS; use AUTOPORT_STUTTER_LOG + tools/stutter-summary.awk)
 #   --novsync      allow immediate/mailbox present (old behaviour, uses more CPU)
 #   --metal-capture  macOS: `touch metal-captures/capture` while playing saves the
-#                  next frame as metal-captures/frame-<n>.gputrace (open in Xcode)
+#                  next 3 frames as metal-captures/frame-<n>.gputrace (open in Xcode)
 #   --scale N      render at N x N internal resolution (Halo 3 is 1152x640)
 #   --pad DIR      enable the scripted pad (drive it with autoport/pad.sh DIR ...)
 #   --native       render with the xenon-gpu native renderer (rexgpu-xgpu plugin)
