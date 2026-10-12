@@ -143,6 +143,10 @@ and labels it with its vertex and pixel shader hashes (as in `--dump_shaders` fi
 names), and the summary then ranks pixel shaders by GPU time. The extra passes
 inflate the totals, so use it to rank draws, not to measure the frame rate.
 
+`AUTOPORT_SKIP_SHADERS=<hash>[,<hash>...]` drops every draw that uses one of those
+vertex or pixel shaders, to see what an expensive shader draws and how much GPU
+time skipping it saves. It's a diagnostic: the skipped effect is missing.
+
 ## Legal
 
 No game code or data is included. `setup-halo3.sh` reads your own disc image;
