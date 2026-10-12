@@ -1085,10 +1085,18 @@ index 1ff4cab..359caf2 100644
                                     uint32_t(upload_regions_.size()), upload_regions_.data());
      upload_regions_.clear();
 diff --git a/src/graphics/vulkan/texture_cache.cpp b/src/graphics/vulkan/texture_cache.cpp
-index 55d4f60..4e33c46 100644
+index 55d4f60..a702cb6 100644
 --- a/src/graphics/vulkan/texture_cache.cpp
 +++ b/src/graphics/vulkan/texture_cache.cpp
-@@ -1639,6 +1639,7 @@ bool VulkanTextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
+@@ -13,6 +13,7 @@
+ #include <algorithm>
+ #include <array>
+ #include <cstddef>
++#include <cstdlib>
+ #include <cstring>
+ #include <utility>
+ 
+@@ -1639,6 +1640,7 @@ bool VulkanTextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
                                            &load_constants.host_offset);
        }
        command_processor_.SubmitBarriers(true);
@@ -1096,7 +1104,7 @@ index 55d4f60..4e33c46 100644
        command_buffer.CmdVkDispatch(group_count_x, group_count_y, load_constants.size_blocks[2]);
        load_constants.guest_offset += level_array_slice_stride_bytes_scaled;
        load_constants.host_offset += uint32_t(level_host_layout.slice_size_bytes);
-@@ -1739,6 +1740,7 @@ bool VulkanTextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
+@@ -1739,6 +1741,7 @@ bool VulkanTextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
                                              &load_constants_float_convert.host_offset);
          }
          command_processor_.SubmitBarriers(true);
@@ -1104,7 +1112,7 @@ index 55d4f60..4e33c46 100644
          command_buffer.CmdVkDispatch(group_count_x, group_count_y,
                                       load_constants_float_convert.size_blocks[2]);
          load_constants_float_convert.guest_offset += level_array_slice_stride_bytes;
-@@ -1887,6 +1889,7 @@ bool VulkanTextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
+@@ -1887,6 +1890,7 @@ bool VulkanTextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
                                     static_cast<int32_t>(dst_height),
                                     static_cast<int32_t>(dst_depth)};
  
@@ -1112,6 +1120,69 @@ index 55d4f60..4e33c46 100644
        command_buffer.CmdVkBlitImage(image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
                                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit_region,
                                      VK_FILTER_LINEAR);
+@@ -2601,11 +2605,21 @@ bool VulkanTextureCache::Initialize() {
+   // decompressed.
+   // TODO(Triang3l): S3TC -> 5551 or 4444 as an option.
+   // TODO(Triang3l): S3TC -> ETC2 / EAC (a huge research topic).
++  // autoport: AUTOPORT_DECOMPRESS_TEXTURES=1 decodes DXT1/3/5, DXN and DXT5A with
++  // Xenia's own load shaders instead of the host's BC decoder (diagnostic, for
++  // artifacts that might come from the host decoder's rounding).
++  const char* decompress_env = std::getenv("AUTOPORT_DECOMPRESS_TEXTURES");
++  const bool force_decompress =
++      decompress_env && *decompress_env && std::strcmp(decompress_env, "0") != 0;
++  if (force_decompress) {
++    REXGPU_INFO("autoport: decoding block-compressed textures in shaders");
++  }
+   HostFormatPair& host_format_dxt1 = host_formats_[uint32_t(xenos::TextureFormat::k_DXT1)];
+   assert_true(host_format_dxt1.format_unsigned.format == VK_FORMAT_BC1_RGBA_UNORM_BLOCK);
+   ifn.vkGetPhysicalDeviceFormatProperties(physical_device, VK_FORMAT_BC1_RGBA_UNORM_BLOCK,
+                                           &format_properties);
+-  if ((format_properties.optimalTilingFeatures & kLinearFilterFeatures) != kLinearFilterFeatures) {
++  if (force_decompress ||
++      (format_properties.optimalTilingFeatures & kLinearFilterFeatures) != kLinearFilterFeatures) {
+     host_format_dxt1.format_unsigned.load_shader = kLoadShaderIndexDXT1ToRGBA8;
+     host_format_dxt1.format_unsigned.format = VK_FORMAT_R8G8B8A8_UNORM;
+     host_format_dxt1.format_unsigned.block_compressed = false;
+@@ -2615,7 +2629,8 @@ bool VulkanTextureCache::Initialize() {
+   assert_true(host_format_dxt2_3.format_unsigned.format == VK_FORMAT_BC2_UNORM_BLOCK);
+   ifn.vkGetPhysicalDeviceFormatProperties(physical_device, VK_FORMAT_BC2_UNORM_BLOCK,
+                                           &format_properties);
+-  if ((format_properties.optimalTilingFeatures & kLinearFilterFeatures) != kLinearFilterFeatures) {
++  if (force_decompress ||
++      (format_properties.optimalTilingFeatures & kLinearFilterFeatures) != kLinearFilterFeatures) {
+     host_format_dxt2_3.format_unsigned.load_shader = kLoadShaderIndexDXT3ToRGBA8;
+     host_format_dxt2_3.format_unsigned.format = VK_FORMAT_R8G8B8A8_UNORM;
+     host_format_dxt2_3.format_unsigned.block_compressed = false;
+@@ -2625,7 +2640,8 @@ bool VulkanTextureCache::Initialize() {
+   assert_true(host_format_dxt4_5.format_unsigned.format == VK_FORMAT_BC3_UNORM_BLOCK);
+   ifn.vkGetPhysicalDeviceFormatProperties(physical_device, VK_FORMAT_BC3_UNORM_BLOCK,
+                                           &format_properties);
+-  if ((format_properties.optimalTilingFeatures & kLinearFilterFeatures) != kLinearFilterFeatures) {
++  if (force_decompress ||
++      (format_properties.optimalTilingFeatures & kLinearFilterFeatures) != kLinearFilterFeatures) {
+     host_format_dxt4_5.format_unsigned.load_shader = kLoadShaderIndexDXT5ToRGBA8;
+     host_format_dxt4_5.format_unsigned.format = VK_FORMAT_R8G8B8A8_UNORM;
+     host_format_dxt4_5.format_unsigned.block_compressed = false;
+@@ -2635,7 +2651,8 @@ bool VulkanTextureCache::Initialize() {
+   assert_true(host_format_dxn.format_unsigned.format == VK_FORMAT_BC5_UNORM_BLOCK);
+   ifn.vkGetPhysicalDeviceFormatProperties(physical_device, VK_FORMAT_BC5_UNORM_BLOCK,
+                                           &format_properties);
+-  if ((format_properties.optimalTilingFeatures & kLinearFilterFeatures) != kLinearFilterFeatures) {
++  if (force_decompress ||
++      (format_properties.optimalTilingFeatures & kLinearFilterFeatures) != kLinearFilterFeatures) {
+     host_format_dxn.format_unsigned.load_shader = kLoadShaderIndexDXNToRG8;
+     host_format_dxn.format_unsigned.format = VK_FORMAT_R8G8_UNORM;
+     host_format_dxn.format_unsigned.block_compressed = false;
+@@ -2644,7 +2661,8 @@ bool VulkanTextureCache::Initialize() {
+   assert_true(host_format_dxt5a.format_unsigned.format == VK_FORMAT_BC4_UNORM_BLOCK);
+   ifn.vkGetPhysicalDeviceFormatProperties(physical_device, VK_FORMAT_BC4_UNORM_BLOCK,
+                                           &format_properties);
+-  if ((format_properties.optimalTilingFeatures & kLinearFilterFeatures) != kLinearFilterFeatures) {
++  if (force_decompress ||
++      (format_properties.optimalTilingFeatures & kLinearFilterFeatures) != kLinearFilterFeatures) {
+     host_format_dxt5a.format_unsigned.load_shader = kLoadShaderIndexDXT5AToR8;
+     host_format_dxt5a.format_unsigned.format = VK_FORMAT_R8_UNORM;
+     host_format_dxt5a.format_unsigned.block_compressed = false;
 diff --git a/src/system/xthread.cpp b/src/system/xthread.cpp
 index 77bce25..53684bc 100644
 --- a/src/system/xthread.cpp
