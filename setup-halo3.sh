@@ -1,48 +1,57 @@
 #!/usr/bin/env bash
-# Build Halo 3 for Linux from your own disc image.
+# Build Halo 3 for Linux or macOS from your own disc image.
 #
 #   ./setup-halo3.sh /path/to/Halo\ 3.iso
 #
 # Steps (all re-run safe):
-#   1. build the build container            (docker/Containerfile -> xenon-build)
+#   1. build the build container            (Linux: docker/Containerfile -> xenon-build;
+#                                            macOS builds natively with Xcode's clang)
 #   2. build extract-xiso                   (tools/extract-xiso)
-#   3. clone ReXGlue v0.10.0 and apply our SDK/runtime patch
+#   3. clone ReXGlue v0.10.0 and apply our SDK/runtime patch (+ the macOS fixes)
 #   4. build and install the patched SDK    (tools/rexglue-resync)
 #   5. port the game: ISO -> codegen -> native build (games/halo3)
 #   6. install the patched runtime          (tools/rexglue-h3)
 # Then: ./play-halo3.sh --name <gamertag>
 set -euo pipefail
 
-ROOT=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
+ROOT=$(cd "$(dirname "$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$0")")" && pwd)
+# shellcheck source=autoport/host.sh
+. "$ROOT/autoport/host.sh"
 ISO=${1:-}
 CONTAINER=xenon-build
 SDK=$ROOT/tools/rexglue-resync
 SRC=$ROOT/ref/rexglue-sdk
 PATCH=$ROOT/autoport/sdk-patches/halo3-system-link.diff
+# applied on top of PATCH: macOS build fixes (platform-guarded, harmless on Linux)
+MACOS_PATCH=$ROOT/autoport/sdk-patches/macos.diff
 
 if [ -z "$ISO" ] || [ ! -f "$ISO" ]; then
   echo "usage: $0 /path/to/Halo 3.iso" >&2
   exit 1
 fi
-ISO=$(realpath "$ISO")
+ISO=$(abspath "$ISO")
 
 step() { printf '\n== %s\n' "$*"; }
-run() {  # run <workdir> <command...>
-  local work=$1
-  shift
-  podman run --rm --userns=keep-id -v "$ROOT:$ROOT:Z" -w "$work" "$CONTAINER" bash -c "$*"
-}
+run() { host_build "$@"; }  # run <workdir> <command...>
 
-for tool in podman git python3; do
+if [ "$HOST_OS" = macos ]; then
+  required=(git python3 cmake ninja clang++ openssl)
+else
+  required=(podman git python3)
+fi
+for tool in "${required[@]}"; do
   command -v "$tool" >/dev/null || {
     echo "missing required tool: $tool" >&2
+    [ "$HOST_OS" = macos ] && echo "  install Xcode, then: brew install bash cmake ninja python" >&2
     exit 1
   }
 done
 
-step "build container ($CONTAINER)"
-if ! podman image exists "$CONTAINER"; then
-  podman build -t "$CONTAINER" -f "$ROOT/docker/Containerfile" "$ROOT/docker"
+if [ "$HOST_OS" = linux ]; then
+  step "build container ($CONTAINER)"
+  if ! podman image exists "$CONTAINER"; then
+    podman build -t "$CONTAINER" -f "$ROOT/docker/Containerfile" "$ROOT/docker"
+  fi
 fi
 
 step "extract-xiso"
@@ -57,32 +66,36 @@ if [ ! -d "$SRC/.git" ]; then
   git clone --branch v0.10.0 https://github.com/rexglue/rexglue-sdk.git "$SRC"
   git -C "$SRC" submodule update --init --recursive
 fi
-if git -C "$SRC" apply --reverse --check "$PATCH" 2>/dev/null; then
-  echo "patch already applied"
+# MACOS_PATCH edits lines PATCH adds, so check it first: once it reverses cleanly,
+# both are in.
+if git -C "$SRC" apply --reverse --check "$MACOS_PATCH" 2>/dev/null; then
+  echo "patches already applied"
 else
-  git -C "$SRC" apply "$PATCH"
-  echo "patch applied"
+  if ! git -C "$SRC" apply --reverse --check "$PATCH" 2>/dev/null; then
+    git -C "$SRC" apply "$PATCH"
+  fi
+  git -C "$SRC" apply "$MACOS_PATCH"
+  echo "patches applied"
 fi
 
 step "build the patched SDK (the long step)"
 if [ ! -x "$SDK/bin/rexglue" ]; then
   run "$SRC" "cmake -S . -B out/build/src-release -G Ninja \
-      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-      -DCMAKE_C_FLAGS=-march=x86-64-v2 -DCMAKE_CXX_FLAGS=-march=x86-64-v2 \
+      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ $ARCH_FLAGS \
       -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=$SDK && \
-    cmake --build out/build/src-release -j\$(nproc) && \
+    cmake --build out/build/src-release -j$NPROC && \
     cmake --install out/build/src-release"
 fi
 
 step "port Halo 3 from $ISO"
-if [ ! -x "$ROOT/games/halo3/port/out/build/linux-release/halo3" ]; then
+if [ ! -x "$ROOT/games/halo3/port/out/build/$BUILD_DIR_NAME/halo3" ]; then
   AUTOPORT_SDK="$SDK" "$ROOT/autoport/port.sh" "$ISO" "$ROOT/games/halo3" halo3
 fi
 
 step "patched runtime"
-mkdir -p "$ROOT/tools/rexglue-h3/lib64"
-cp -f "$SDK/lib64/librexruntime.so" "$ROOT/tools/rexglue-h3/lib64/librexruntime.so"
+mkdir -p "$ROOT/tools/rexglue-h3/$LIBDIR"
+cp -f "$SDK/$LIBDIR/librexruntime.$DLEXT" "$ROOT/tools/rexglue-h3/$LIBDIR/librexruntime.$DLEXT"
 
 step "done"
 cat <<'EOF'

@@ -74,6 +74,9 @@ def main():
     ap.add_argument("--run-args", default="")
     ap.add_argument("--seconds", type=int, default=60)
     ap.add_argument("--max-iter", type=int, default=25)
+    ap.add_argument("--dlext", default="so", help="shared library extension (so, dylib)")
+    ap.add_argument("--libpath-var", default="LD_LIBRARY_PATH",
+                    help="dynamic loader search path variable (DYLD_LIBRARY_PATH on macOS)")
     args = ap.parse_args()
     manifest = args.manifest.resolve()
     root = manifest.parent
@@ -81,8 +84,11 @@ def main():
     logs.mkdir(exist_ok=True)
 
     env = dict(os.environ)
-    env["LD_LIBRARY_PATH"] = f"{args.build_dir}:{args.sdk_lib}"
-    env.setdefault("SDL_VIDEODRIVER", "offscreen")  # headless: GPU emulation still runs on Vulkan
+    env[args.libpath_var] = f"{args.build_dir}:{args.sdk_lib}"
+    if sys.platform != "darwin":
+        # headless: GPU emulation still runs on Vulkan. macOS keeps a real window: SDL's
+        # offscreen driver is untested with MoltenVK.
+        env.setdefault("SDL_VIDEODRIVER", "offscreen")
 
     for it in range(args.max_iter):
         runlog = logs / f"run{it}.log"
@@ -112,7 +118,8 @@ def main():
         if sh(["bash", "-c", args.build_cmd], logs / f"build{it}.log", cwd=root):
             print(f"[iter {it}] build failed; see {logs / f'build{it}.log'}")
             return 1
-        subprocess.run(["bash", "-c", "for f in lib*.so; do n=${f#lib}; ln -sf $f ${n%.so}; done"],
+        ext = args.dlext
+        subprocess.run(["bash", "-c", f"shopt -s nullglob; for f in lib*.{ext}; do n=${{f#lib}}; ln -sf $f ${{n%.{ext}}}; done"],
                        cwd=args.build_dir)
     return 1
 

@@ -1,6 +1,6 @@
-# Halo 3, native on Linux — with ZeroTier system link
+# Halo 3, native on Linux and macOS — with ZeroTier system link
 
-Recompiles your own Halo 3 (Xbox 360) disc image into a native Linux binary and
+Recompiles your own Halo 3 (Xbox 360) disc image into a native Linux or macOS binary and
 plays it with working **system link (LAN) multiplayer**, including between
 machines that only share a **ZeroTier** network.
 
@@ -16,6 +16,20 @@ the ISO → native pipeline (`autoport/`), the ReXGlue changes that make Halo 3
 - ~40 GB free disk
 - Your own Halo 3 disc image (ISO); it stays on your machine
 - For internet play: both machines on the same ZeroTier network
+
+### macOS (experimental, untested)
+
+- macOS on Apple Silicon or Intel, with Xcode installed (the SDK builds MoltenVK
+  from source, which needs the full Xcode, not just the command-line tools)
+- Homebrew: `brew install bash cmake ninja python` (the scripts need bash 4.4+;
+  macOS ships 3.2)
+- ~40 GB free disk
+
+On macOS everything builds natively with Xcode's clang instead of in the
+container; Vulkan runs through MoltenVK, which the SDK bundles. The same
+`./setup-halo3.sh` and `./play-halo3.sh` commands work. This port has not been
+built or run on a Mac yet, so expect to fix build errors along the way; see
+"macOS port notes" below.
 
 ## Build
 
@@ -77,6 +91,24 @@ well-tested path.
 - `--instance 1..16` gives each local instance its own `127.0.0.N`, saves and
   cache for system link on a single PC.
 - Kernel/GPU details and the session history are in `autoport/` comments.
+
+## macOS port notes
+
+What differs from the Linux path:
+
+- `autoport/host.sh` picks per-platform settings: `.dylib`/`lib` instead of
+  `.so`/`lib64`, `DYLD_LIBRARY_PATH`, a native build instead of podman, and the
+  CPU architecture flags.
+- `autoport/sdk-patches/macos.diff` is applied on top of
+  `halo3-system-link.diff`. It replaces the Linux-only `process_vm_readv` (GPU
+  capture memory dump) with `mach_vm_read_overwrite`, and makes the native
+  renderer's `--no-undefined` link flag ld64-compatible.
+- The runtime fix-up loop (`autoport/runtime_loop.py`) opens a real window on
+  macOS rather than SDL's offscreen driver.
+- `--zt` finds the ZeroTier address on the `feth*` interfaces macOS uses.
+- `autoport/clean_shm.sh` is skipped (no `/dev/shm` on macOS).
+- MoltenVK has no `VK_EXT_graphics_pipeline_library`, so the patch's pipeline
+  library path is disabled automatically and the standard pipeline path is used.
 
 ## Legal
 

@@ -20,12 +20,14 @@
 # Anything after `--` is passed to the game unchanged.
 set -euo pipefail
 
-ROOT=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
-BUILD=$ROOT/games/halo3/port/out/build/linux-release
-SDK_LIB=$ROOT/tools/rexglue-resync/lib64
+ROOT=$(cd "$(dirname "$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$0")")" && pwd)
+# shellcheck source=autoport/host.sh
+. "$ROOT/autoport/host.sh"
+BUILD=$ROOT/games/halo3/port/out/build/$BUILD_DIR_NAME
+SDK_LIB=$ROOT/tools/rexglue-resync/$LIBDIR
 # Halo 3 runtime fixes built from the ref/rexglue-h3 worktree (branch halo3); only
-# librexruntime.so is replaced, everything else comes from the resync SDK.
-H3_LIB=$ROOT/tools/rexglue-h3/lib64
+# librexruntime is replaced, everything else comes from the resync SDK.
+H3_LIB=$ROOT/tools/rexglue-h3/$LIBDIR
 GAME=$ROOT/games/halo3/game
 
 window=(--fullscreen=false --window_width=1280 --window_height=800)
@@ -54,8 +56,14 @@ while [ $# -gt 0 ]; do
       extra+=(--net_ip="$1")
       ;;
     --zt)
-      explicit_ip=$(ip -4 -o addr show 2>/dev/null |
-        awk '$2 ~ /^zt/ { sub(/\/.*/, "", $4); print $4; exit }')
+      if [ "$HOST_OS" = macos ]; then
+        # ZeroTier's macOS interfaces are feth<N>
+        explicit_ip=$(ifconfig 2>/dev/null |
+          awk '/^[a-z]/ { iface = $1 } iface ~ /^(feth|zt)/ && $1 == "inet" { print $2; exit }')
+      else
+        explicit_ip=$(ip -4 -o addr show 2>/dev/null |
+          awk '$2 ~ /^zt/ { sub(/\/.*/, "", $4); print $4; exit }')
+      fi
       if [ -z "$explicit_ip" ]; then
         echo "--zt: no ZeroTier interface with an IPv4 address (is ZeroTier joined?)" >&2
         exit 1
@@ -71,7 +79,7 @@ while [ $# -gt 0 ]; do
     --pad)
       shift
       mkdir -p "$1"
-      envs+=("AUTOPORT_INPUT_FILE=$(realpath "$1")/cmd.txt")
+      envs+=("AUTOPORT_INPUT_FILE=$(abspath "$1")/cmd.txt")
       ;;
     -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     --) shift; extra+=("$@"); break ;;
@@ -107,14 +115,17 @@ export __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=${__GL_SHADER_DISK_CACHE_SKIP_CLEANUP
 export MESA_SHADER_CACHE_MAX_SIZE=${MESA_SHADER_CACHE_MAX_SIZE:-10G}
 
 # Free guest-memory files leaked by earlier crashed runs (only ones no process has open).
-"$ROOT/autoport/clean_shm.sh"
+# Linux only: macOS has no /dev/shm to inspect.
+if [ "$HOST_OS" = linux ]; then
+  "$ROOT/autoport/clean_shm.sh"
+fi
 
 cd "$BUILD"
 # The GPU plugins live in the SDK. Relink them if this tree was copied from
 # another machine/path (the symlinks port.sh made are absolute).
-for gpu_plugin in librexgpu-xenos.so librexgpu-xgpu.so; do
+for gpu_plugin in librexgpu-xenos.$DLEXT librexgpu-xgpu.$DLEXT; do
   [ -e "$SDK_LIB/$gpu_plugin" ] || continue
   [ -e "$gpu_plugin" ] || ln -sfn "$SDK_LIB/$gpu_plugin" "$gpu_plugin"
 done
-exec env "${envs[@]}" LD_LIBRARY_PATH="$BUILD:$H3_LIB:$SDK_LIB" ./halo3 \
+exec env "${envs[@]}" "$LIBPATH_VAR=$BUILD:$H3_LIB:$SDK_LIB" ./halo3 \
   --game_data_root="$GAME" --gpu_plugin=$plugin "${window[@]}" "${extra[@]}"
