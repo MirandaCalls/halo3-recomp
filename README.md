@@ -21,8 +21,9 @@ the ISO → native pipeline (`autoport/`), the ReXGlue changes that make Halo 3
 
 - macOS on Apple Silicon or Intel, with Xcode installed (the SDK builds MoltenVK
   from source, which needs the full Xcode, not just the command-line tools)
-- Homebrew: `brew install bash cmake ninja python` (the scripts need bash 4.4+;
-  macOS ships 3.2)
+- Homebrew: `brew install bash cmake ninja python` (the scripts need bash 4.4+,
+  which macOS lacks, and python 3.11+; setup installs `capstone` into a private
+  venv under `tools/venv`)
 - ~40 GB free disk
 
 On macOS everything builds natively with Xcode's clang instead of in the

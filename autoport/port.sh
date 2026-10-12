@@ -43,13 +43,16 @@ if [ ! -f "$PORT/${NAME}_manifest.toml" ]; then
   python3 - "$PORT/${NAME}_manifest.toml" "$WORK/game" <<'EOF'
 import re, sys, os
 manifest, game = sys.argv[1], sys.argv[2]
-real = {os.path.relpath(os.path.join(d, f), game).lower(): os.path.relpath(os.path.join(d, f), game)
-        for d, _, fs in os.walk(game) for f in fs}
+# Match whole absolute paths case-insensitively against the files on disk. init
+# writes them through the resolved games/halo3/game symlink, so the folder name
+# itself ("halo 3" vs "Halo 3") can be the part with the wrong case.
+base = os.path.dirname(os.path.realpath(manifest))
+real = {os.path.join(d, f).lower(): os.path.join(d, f)
+        for d, _, fs in os.walk(os.path.realpath(game)) for f in fs}
 text = open(manifest).read()
 def fix(m):
-    rel = os.path.relpath(os.path.normpath(os.path.join(os.path.dirname(manifest), m.group(1))), game)
-    fixed = real.get(rel.lower(), rel)
-    return f'file_path = "{os.path.relpath(os.path.join(game, fixed), os.path.dirname(manifest))}"'
+    path = os.path.normpath(os.path.join(base, m.group(1)))
+    return f'file_path = "{os.path.relpath(real.get(path.lower(), path), base)}"'
 open(manifest, "w").write(re.sub(r'file_path = "([^"]+)"', fix, text))
 EOF
   cat >> "$PORT/CMakeLists.txt" <<EOF

@@ -54,6 +54,20 @@ if [ "$HOST_OS" = linux ]; then
   fi
 fi
 
+step "python tools (capstone)"
+# The autoport scripts need python 3.11+ (tomllib) and capstone. A private venv
+# avoids pip's "externally managed environment" refusal on Homebrew python.
+VENV=$ROOT/tools/venv
+if [ ! -x "$VENV/bin/python3" ]; then
+  python3 -c 'import sys; sys.exit(sys.version_info < (3, 11))' || {
+    echo "python 3.11 or newer is required ($(python3 --version)); on macOS: brew install python" >&2
+    exit 1
+  }
+  python3 -m venv "$VENV"
+fi
+"$VENV/bin/python3" -c 'import capstone' 2>/dev/null || "$VENV/bin/python3" -m pip install --quiet capstone
+export PATH="$VENV/bin:$PATH"
+
 step "extract-xiso"
 if [ ! -x "$ROOT/tools/extract-xiso/build/extract-xiso" ]; then
   run "$ROOT/tools/extract-xiso" \
