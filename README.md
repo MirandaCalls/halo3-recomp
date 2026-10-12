@@ -111,12 +111,27 @@ What differs from the Linux path:
   support. It also fixes a race in the SDK's `XThread` startup, where a new thread
   and its creator could write the thread's name at once and corrupt the heap
   (macOS aborts with "pointer being freed was not allocated").
+  Finally, it adds per-render-pass GPU timing (see below).
 - The runtime fix-up loop (`autoport/runtime_loop.py`) opens a real window on
   macOS rather than SDL's offscreen driver.
 - `--zt` finds the ZeroTier address on the `feth*` interfaces macOS uses.
 - `autoport/clean_shm.sh` is skipped (no `/dev/shm` on macOS).
 - MoltenVK has no `VK_EXT_graphics_pipeline_library`, so the patch's pipeline
   library path is disabled automatically and the standard pipeline path is used.
+
+### Measuring GPU time per render pass
+
+`AUTOPORT_GPU_TIMING_LOG=<file>` writes one line per render pass with its GPU
+time, measured with Vulkan timestamp queries and read back without stalling. Each
+line records the pass's kind (the game's draws, an EDRAM transfer between render
+targets, or the copy to the window), its size, its guest draw count and its render
+target formats. `tools/gpu-timing-summary.awk` ranks the passes by GPU time per
+frame:
+
+```sh
+AUTOPORT_GPU_TIMING_LOG=$PWD/gpu-timing.log ./play-halo3.sh --name <gamertag>
+awk -v from=25 -f tools/gpu-timing-summary.awk gpu-timing.log   # skip the boot logos
+```
 
 ## Legal
 
