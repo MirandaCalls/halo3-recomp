@@ -42,6 +42,9 @@ cd xenon-pc-comp
 The first run is long (the patched ReXGlue SDK is built from source, then the
 game is recompiled). It is re-run safe: finished steps are skipped.
 
+The disc is extracted to `Halo 3/` in the repo (git-ignored). If you already have
+the extracted files, put them there and the extraction step is skipped.
+
 ## Play
 
 ```bash

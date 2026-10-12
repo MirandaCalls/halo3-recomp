@@ -9,7 +9,7 @@
 #   2. build extract-xiso                   (tools/extract-xiso)
 #   3. clone ReXGlue v0.10.0 and apply our SDK/runtime patch (+ the macOS fixes)
 #   4. build and install the patched SDK    (tools/rexglue-resync)
-#   5. port the game: ISO -> codegen -> native build (games/halo3)
+#   5. port the game: ISO -> codegen -> native build (games/halo3; disc files in "Halo 3/")
 #   6. install the patched runtime          (tools/rexglue-h3)
 # Then: ./play-halo3.sh --name <gamertag>
 set -euo pipefail
@@ -95,6 +95,11 @@ if [ ! -x "$SDK/bin/rexglue" ]; then
 fi
 
 step "port Halo 3 from $ISO"
+# The extracted disc lives in "Halo 3/" at the repo root (git-ignored). The pipeline
+# reaches it as games/halo3/game, a symlink, so the space never hits word-split
+# commands or runtime flags. A real games/halo3/game from older runs is left as is.
+mkdir -p "$ROOT/Halo 3" "$ROOT/games/halo3"
+[ -e "$ROOT/games/halo3/game" ] || ln -s "../../Halo 3" "$ROOT/games/halo3/game"
 if [ ! -x "$ROOT/games/halo3/port/out/build/$BUILD_DIR_NAME/halo3" ]; then
   AUTOPORT_SDK="$SDK" "$ROOT/autoport/port.sh" "$ISO" "$ROOT/games/halo3" halo3
 fi

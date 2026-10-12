@@ -1,6 +1,8 @@
 # Upstream checkouts and everything derived from them (never committed)
 /ref/
 /games/
+# extracted disc contents (setup-halo3.sh)
+/Halo 3/
 
 # SDK builds and downloads under tools/ (our scripts and extract-xiso stay)
 /tools/rexglue-sdk/
