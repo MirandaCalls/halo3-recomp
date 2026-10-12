@@ -3,7 +3,10 @@
 #
 # Usage: ./play-halo3.sh [options] [-- extra runtime flags]
 #   --fullscreen   fullscreen instead of a 1280x800 window
-#   --fps          print the guest frame rate every 5 s
+#   --size WxH     window size instead of 1280x800
+#   --keyboard     play with keyboard and mouse (SDK mnk_mode, mouse look)
+#   --fps          print the guest frame rate every 5 s (no effect yet: nothing reads
+#                  AUTOPORT_FPS; use AUTOPORT_STUTTER_LOG + tools/stutter-summary.awk)
 #   --novsync      allow immediate/mailbox present (old behaviour, uses more CPU)
 #   --scale N      render at N x N internal resolution (Halo 3 is 1152x640)
 #   --pad DIR      enable the scripted pad (drive it with autoport/pad.sh DIR ...)
@@ -40,6 +43,15 @@ explicit_ip=
 while [ $# -gt 0 ]; do
   case "$1" in
     --fullscreen) window=(--fullscreen=true) ;;
+    --size)
+      shift
+      if ! [[ $1 =~ ^([0-9]+)x([0-9]+)$ ]]; then
+        echo "--size wants WIDTHxHEIGHT, e.g. 640x400" >&2
+        exit 1
+      fi
+      window=(--fullscreen=false --window_width="${BASH_REMATCH[1]}" --window_height="${BASH_REMATCH[2]}")
+      ;;
+    --keyboard) extra+=(--mnk_mode=true --mnk_mouse=true) ;;
     --fps) envs+=(AUTOPORT_FPS=1) ;;
     --native) plugin=xgpu ;;
     --instance)
@@ -81,11 +93,17 @@ while [ $# -gt 0 ]; do
       mkdir -p "$1"
       envs+=("AUTOPORT_INPUT_FILE=$(abspath "$1")/cmd.txt")
       ;;
-    -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     --) shift; extra+=("$@"); break ;;
     *) echo "unknown option: $1 (see --help)" >&2; exit 1 ;;
   esac
   shift
+done
+
+# Window flags given after `--` replace the defaults: the game rejects a flag
+# given twice.
+for arg in "${extra[@]}"; do
+  case "$arg" in --fullscreen=*|--window_width=*|--window_height=*) window=() ;; esac
 done
 
 if [ -n "$instance" ] && [ -n "$explicit_ip" ]; then
