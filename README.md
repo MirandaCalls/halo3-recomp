@@ -157,6 +157,12 @@ and labels it with its vertex and pixel shader hashes (as in `--dump_shaders` fi
 names), and the summary then ranks pixel shaders by GPU time. The extra passes
 inflate the totals, so use it to rank draws, not to measure the frame rate.
 
+`./play-halo3.sh --metal-capture` captures frames without a debugger (Xcode's
+debugger stops on the faults the runtime uses to watch GPU memory). While playing,
+`touch metal-captures/capture` saves the next frame as
+`metal-captures/frame-<n>.gputrace`, which Xcode opens with pixel history and
+shader debugging.
+
 `AUTOPORT_SKIP_SHADERS=<hash>[,<hash>...]` drops every draw that uses one of those
 vertex or pixel shaders, to see what an expensive shader draws and how much GPU
 time skipping it saves. It's a diagnostic: the skipped effect is missing.

@@ -37,3 +37,6 @@ autoport/resync/work-rtc/
 *.log
 *.ppm
 *.pid
+
+# Metal frame captures (play-halo3.sh --metal-capture)
+/metal-captures/

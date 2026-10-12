@@ -560,7 +560,7 @@ index 34a9a81..42d17bd 100644
    // Write coverage to gl_SampleMask and discard if zero (FBO mode only).
    if (!edram_fragment_shader_interlock_) {
 diff --git a/src/graphics/vulkan/command_processor.cpp b/src/graphics/vulkan/command_processor.cpp
-index 44aa9e2..6f18683 100644
+index 44aa9e2..2ef4460 100644
 --- a/src/graphics/vulkan/command_processor.cpp
 +++ b/src/graphics/vulkan/command_processor.cpp
 @@ -12,9 +12,14 @@
@@ -578,7 +578,7 @@ index 44aa9e2..6f18683 100644
  #include <cstring>
  #include <iterator>
  #include <mutex>
-@@ -555,6 +560,57 @@ bool CompileGlslToSpirvInternal(EShLanguage stage, std::string_view source,
+@@ -555,6 +560,171 @@ bool CompileGlslToSpirvInternal(EShLanguage stage, std::string_view source,
    return true;
  }
  
@@ -633,10 +633,124 @@ index 44aa9e2..6f18683 100644
 +  return false;
 +}
 +
++#if REX_PLATFORM_MAC
++// autoport: Metal frame capture without a debugger. With AUTOPORT_METAL_CAPTURE
++// set to a directory (and MTL_CAPTURE_ENABLED=1, which Metal requires), creating
++// a file named "capture" there saves the next guest frame as
++// frame-<n>.gputrace, which Xcode opens with pixel history and shader debugging.
++// Metal is reached through the Objective-C runtime, looked up at run time, so
++// nothing extra is linked.
++class MetalFrameCapture {
++ public:
++  static MetalFrameCapture& Get() {
++    static MetalFrameCapture capture;
++    return capture;
++  }
++
++  // Called once per guest frame.
++  void OnSwap(uint64_t frame) {
++    if (directory_.empty()) {
++      return;
++    }
++    if (capturing_) {
++      Send<void>(Manager(), "stopCapture");
++      capturing_ = false;
++      REXGPU_INFO("autoport: Metal frame capture saved to {}", last_path_);
++      return;
++    }
++    // Checking for the trigger every frame would cost a syscall per frame.
++    if (frame % 15) {
++      return;
++    }
++    std::error_code ec;
++    std::filesystem::path trigger = std::filesystem::path(directory_) / "capture";
++    if (!std::filesystem::exists(trigger, ec)) {
++      return;
++    }
++    std::filesystem::remove(trigger, ec);
++    last_path_ =
++        (std::filesystem::path(directory_) / ("frame-" + std::to_string(frame) + ".gputrace"))
++            .string();
++    capturing_ = Start(last_path_);
++    if (!capturing_) {
++      REXGPU_ERROR(
++          "autoport: Metal frame capture failed to start (is MTL_CAPTURE_ENABLED=1 set?)");
++    }
++  }
++
++ private:
++  using Id = void*;
++  using Sel = void*;
++
++  MetalFrameCapture() {
++    const char* directory = std::getenv("AUTOPORT_METAL_CAPTURE");
++    if (!directory || !*directory) {
++      return;
++    }
++    get_class_ = reinterpret_cast<Id (*)(const char*)>(dlsym(RTLD_DEFAULT, "objc_getClass"));
++    register_selector_ =
++        reinterpret_cast<Sel (*)(const char*)>(dlsym(RTLD_DEFAULT, "sel_registerName"));
++    msg_send_ = dlsym(RTLD_DEFAULT, "objc_msgSend");
++    void* metal = dlopen("/System/Library/Frameworks/Metal.framework/Metal", RTLD_LAZY);
++    create_device_ =
++        metal ? reinterpret_cast<Id (*)()>(dlsym(metal, "MTLCreateSystemDefaultDevice")) : nullptr;
++    if (!get_class_ || !register_selector_ || !msg_send_ || !create_device_) {
++      REXGPU_ERROR("autoport: Metal frame capture unavailable (Objective-C runtime not found)");
++      return;
++    }
++    directory_ = directory;
++    std::error_code ec;
++    std::filesystem::create_directories(directory_, ec);
++    REXGPU_INFO("autoport: Metal frame capture armed; create {}/capture to capture a frame",
++                directory_);
++  }
++
++  template <typename R, typename... Args>
++  R Send(Id object, const char* selector, Args... args) {
++    return reinterpret_cast<R (*)(Id, Sel, Args...)>(msg_send_)(object,
++                                                                register_selector_(selector),
++                                                                args...);
++  }
++
++  Id Manager() { return Send<Id>(get_class_("MTLCaptureManager"), "sharedCaptureManager"); }
++
++  bool Start(const std::string& path) {
++    // MTLCaptureDestinationGPUTraceDocument
++    constexpr long kGpuTraceDocument = 2;
++    Id manager = Manager();
++    if (!manager || !Send<signed char>(manager, "supportsDestination:", kGpuTraceDocument)) {
++      return false;
++    }
++    // MoltenVK renders with the system default device (the only GPU on Apple
++    // silicon), so capturing it captures every command buffer of the frame.
++    Id device = create_device_();
++    Id descriptor = Send<Id>(Send<Id>(get_class_("MTLCaptureDescriptor"), "alloc"), "init");
++    Send<void>(descriptor, "setCaptureObject:", device);
++    Send<void>(descriptor, "setDestination:", kGpuTraceDocument);
++    Id path_string = Send<Id>(get_class_("NSString"), "stringWithUTF8String:", path.c_str());
++    Send<void>(descriptor, "setOutputURL:",
++               Send<Id>(get_class_("NSURL"), "fileURLWithPath:", path_string));
++    Id error = nullptr;
++    bool started =
++        Send<signed char>(manager, "startCaptureWithDescriptor:error:", descriptor, &error) != 0;
++    Send<void>(descriptor, "release");
++    return started;
++  }
++
++  std::string directory_;
++  std::string last_path_;
++  bool capturing_ = false;
++  Id (*get_class_)(const char*) = nullptr;
++  Sel (*register_selector_)(const char*) = nullptr;
++  void* msg_send_ = nullptr;
++  Id (*create_device_)() = nullptr;
++};
++#endif  // REX_PLATFORM_MAC
++
  }  // namespace
  
  // Generated with `xb buildshaders`.
-@@ -1979,6 +2035,8 @@ bool VulkanCommandProcessor::SetupContext() {
+@@ -1979,6 +2149,8 @@ bool VulkanCommandProcessor::SetupContext() {
  
    occlusion_query_resources_available_ = InitializeOcclusionQueryResources();
  
@@ -645,7 +759,7 @@ index 44aa9e2..6f18683 100644
    // Initialize the ZPD occlusion query pool and resources.
    zpd_host_query_pool_ = std::make_unique<VulkanZPDQueryPool>();
    EnsureZPDQueryResources();
-@@ -1999,6 +2057,7 @@ void VulkanCommandProcessor::ShutdownContext() {
+@@ -1999,6 +2171,7 @@ void VulkanCommandProcessor::ShutdownContext() {
  
    ShutdownZPDQueryResources();
    zpd_host_query_pool_.reset();
@@ -653,17 +767,20 @@ index 44aa9e2..6f18683 100644
  
    const ui::vulkan::VulkanDevice* const vulkan_device = GetVulkanDevice();
    const ui::vulkan::VulkanDevice::Functions& dfn = vulkan_device->functions();
-@@ -2379,6 +2438,9 @@ void VulkanCommandProcessor::OnGammaRampPWLValueWritten() {
+@@ -2379,6 +2552,12 @@ void VulkanCommandProcessor::OnGammaRampPWLValueWritten() {
  void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontbuffer_width,
                                         uint32_t frontbuffer_height) {
    stutter::Event('S', 0.0, frontbuffer_ptr);
 +  gpu_pass_timer_.Collect(GetCompletedSubmission());
 +  gpu_pass_timer_.FrameEnded();
++#if REX_PLATFORM_MAC
++  MetalFrameCapture::Get().OnSwap(frame_current_);
++#endif
 +#if !REX_PLATFORM_MAC
    // autoport: capture guest frame N with RenderDoc (AUTOPORT_RDOC_FRAME=N, run under renderdoccmd).
    // autoport: capture the next guest frame when a trigger file appears
    // (AUTOPORT_RDOC_TRIGGER_FILE=<path>, run under renderdoccmd). The file is
-@@ -2432,6 +2494,7 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
+@@ -2432,6 +2611,7 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
        REXGPU_INFO("autoport: RenderDoc capture ended at swap {} ok={}", swap_count, ok);
      }
    }
@@ -671,7 +788,7 @@ index 44aa9e2..6f18683 100644
    SCOPE_profile_cpu_f("gpu");
    vertex_buffers_in_sync_[0] = 0;
    vertex_buffers_in_sync_[1] = 0;
-@@ -2777,7 +2840,8 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
+@@ -2777,7 +2957,8 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
              gamma_ramp_buffer_copy.srcOffset = gamma_ramp_upload_offset;
              gamma_ramp_buffer_copy.dstOffset = gamma_ramp_offset_in_frame;
              gamma_ramp_buffer_copy.size = gamma_ramp_size;
@@ -681,7 +798,7 @@ index 44aa9e2..6f18683 100644
                                                       1, &gamma_ramp_buffer_copy);
              PushBufferMemoryBarrier(gamma_ramp_buffer_, gamma_ramp_offset_in_frame, gamma_ramp_size,
                                      VK_PIPELINE_STAGE_TRANSFER_BIT, gamma_ramp_read_stage_mask,
-@@ -2883,6 +2947,7 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
+@@ -2883,6 +3064,7 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
            BindExternalComputePipeline(swap_apply_gamma_compute_pipeline);
            uint32_t group_count_x = (guest_output_width + 15) / 16;
            uint32_t group_count_y = (guest_output_height + 7) / 8;
@@ -689,7 +806,7 @@ index 44aa9e2..6f18683 100644
            deferred_command_buffer_.CmdVkDispatch(group_count_x, group_count_y, 1);
  
            if (use_fxaa) {
-@@ -2954,6 +3019,7 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
+@@ -2954,6 +3136,7 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
              BindExternalComputePipeline(swap_post_effect == SwapPostEffect::kFxaaExtreme
                                              ? swap_fxaa_extreme_pipeline_
                                              : swap_fxaa_pipeline_);
@@ -697,7 +814,7 @@ index 44aa9e2..6f18683 100644
              deferred_command_buffer_.CmdVkDispatch(group_count_x, group_count_y, 1);
            }
  
-@@ -3060,6 +3126,8 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
+@@ -3060,6 +3243,8 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
            render_pass_begin_info.renderArea.extent.height = guest_output_height;
            render_pass_begin_info.clearValueCount = 0;
            render_pass_begin_info.pClearValues = nullptr;
@@ -706,7 +823,7 @@ index 44aa9e2..6f18683 100644
            deferred_command_buffer_.CmdVkBeginRenderPass(&render_pass_begin_info,
                                                          VK_SUBPASS_CONTENTS_INLINE);
            current_render_pass_ = swap_apply_gamma_render_pass_;
-@@ -3114,6 +3182,7 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
+@@ -3114,6 +3299,7 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontb
  
            deferred_command_buffer_.CmdVkDraw(3, 1, 0, 0);
            deferred_command_buffer_.CmdVkEndRenderPass();
@@ -714,7 +831,7 @@ index 44aa9e2..6f18683 100644
            current_render_pass_ = VK_NULL_HANDLE;
            in_render_pass_ = false;
  
-@@ -3271,6 +3340,7 @@ bool VulkanCommandProcessor::SubmitBarriers(bool force_end_render_pass) {
+@@ -3271,6 +3457,7 @@ bool VulkanCommandProcessor::SubmitBarriers(bool force_end_render_pass) {
      return false;
    }
    EndRenderPass();
@@ -722,7 +839,7 @@ index 44aa9e2..6f18683 100644
    for (auto it = pending_barriers_.cbegin(); it != pending_barriers_.cend(); ++it) {
      auto it_next = std::next(it);
      bool is_last = it_next == pending_barriers_.cend();
-@@ -3322,6 +3392,7 @@ void VulkanCommandProcessor::SubmitBarriersAndEnterRenderTargetCacheRenderPass(
+@@ -3322,6 +3509,7 @@ void VulkanCommandProcessor::SubmitBarriersAndEnterRenderTargetCacheRenderPass(
      } else {
        deferred_command_buffer_.CmdVkEndRenderPass();
      }
@@ -730,7 +847,7 @@ index 44aa9e2..6f18683 100644
      in_render_pass_ = false;
    }
  
-@@ -3333,6 +3404,13 @@ void VulkanCommandProcessor::SubmitBarriersAndEnterRenderTargetCacheRenderPass(
+@@ -3333,6 +3521,13 @@ void VulkanCommandProcessor::SubmitBarriersAndEnterRenderTargetCacheRenderPass(
    current_render_pass_ = use_dynamic_rendering ? VK_NULL_HANDLE : render_pass;
    current_framebuffer_ = framebuffer;
  
@@ -744,7 +861,7 @@ index 44aa9e2..6f18683 100644
    if (use_dynamic_rendering) {
      VkRenderingAttachmentInfo color_attachments[xenos::kMaxColorRenderTargets];
      VkRenderingAttachmentInfo depth_attachment;
-@@ -3404,6 +3482,7 @@ void VulkanCommandProcessor::SubmitBarriersAndEnterRenderTargetCacheRenderPass(
+@@ -3404,6 +3599,7 @@ void VulkanCommandProcessor::SubmitBarriersAndEnterRenderTargetCacheRenderPass(
      } else {
        deferred_command_buffer_.CmdVkEndRenderPass();
      }
@@ -752,7 +869,7 @@ index 44aa9e2..6f18683 100644
      in_render_pass_ = false;
    }
  
-@@ -3415,6 +3494,10 @@ void VulkanCommandProcessor::SubmitBarriersAndEnterRenderTargetCacheRenderPass(
+@@ -3415,6 +3611,10 @@ void VulkanCommandProcessor::SubmitBarriersAndEnterRenderTargetCacheRenderPass(
    current_render_pass_ = use_dynamic_rendering ? VK_NULL_HANDLE : render_pass;
    current_framebuffer_ = framebuffer;
  
@@ -763,7 +880,7 @@ index 44aa9e2..6f18683 100644
    if (use_dynamic_rendering) {
      VkRenderingAttachmentInfo color_attachment = {};
      VkRenderingAttachmentInfo depth_attachment = {};
-@@ -3497,6 +3580,7 @@ void VulkanCommandProcessor::EndRenderPass() {
+@@ -3497,6 +3697,7 @@ void VulkanCommandProcessor::EndRenderPass() {
    } else {
      deferred_command_buffer_.CmdVkEndRenderPass();
    }
@@ -771,7 +888,7 @@ index 44aa9e2..6f18683 100644
    current_render_pass_ = VK_NULL_HANDLE;
    current_framebuffer_ = nullptr;
    in_render_pass_ = false;
-@@ -3903,6 +3987,10 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type, uint32_t
+@@ -3903,6 +4104,10 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type, uint32_t
        return true;
      }
    }
@@ -782,7 +899,7 @@ index 44aa9e2..6f18683 100644
    bool memexport_used_pixel = pixel_shader && (pixel_shader->memexport_eM_written() != 0);
    if (memexport_used_pixel) {
      if (!device_properties.fragmentStoresAndAtomics) {
-@@ -4407,6 +4495,7 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type, uint32_t
+@@ -4407,6 +4612,7 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type, uint32_t
        guest_dma_index_copy_region.srcOffset = primitive_processing_result.guest_index_base;
        guest_dma_index_copy_region.dstOffset = 0;
        guest_dma_index_copy_region.size = guest_dma_index_size;
@@ -790,7 +907,7 @@ index 44aa9e2..6f18683 100644
        deferred_command_buffer_.CmdVkCopyBuffer(shared_memory_->buffer(),
                                                 guest_dma_index_scratch_buffer.buffer(), 1,
                                                 &guest_dma_index_copy_region);
-@@ -4442,6 +4531,11 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type, uint32_t
+@@ -4442,6 +4648,11 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type, uint32_t
    // drawing.
    uint32_t zpd_hybrid_index_before_render_pass =
        zpd_active_segment_.hybrid ? zpd_active_query_index_ : UINT32_MAX;
@@ -802,7 +919,7 @@ index 44aa9e2..6f18683 100644
    SubmitBarriersAndEnterRenderTargetCacheRenderPass(
        render_target_cache_->last_update_render_pass(),
        render_target_cache_->last_update_framebuffer());
-@@ -4462,6 +4556,9 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type, uint32_t
+@@ -4462,6 +4673,9 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type, uint32_t
            PrimitiveProcessor::ProcessedIndexBufferType::kNone ||
        shader_32bit_index_dma) {
      deferred_command_buffer_.CmdVkDraw(primitive_processing_result.host_draw_vertex_count, 1, 0, 0);
@@ -812,7 +929,7 @@ index 44aa9e2..6f18683 100644
    } else {
      std::pair<VkBuffer, VkDeviceSize> index_buffer;
      switch (primitive_processing_result.index_buffer_type) {
-@@ -4492,6 +4589,9 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type, uint32_t
+@@ -4492,6 +4706,9 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type, uint32_t
          primitive_processing_result.host_index_format == xenos::IndexFormat::kInt16
              ? VK_INDEX_TYPE_UINT16
              : VK_INDEX_TYPE_UINT32);
@@ -822,7 +939,7 @@ index 44aa9e2..6f18683 100644
      deferred_command_buffer_.CmdVkDrawIndexed(primitive_processing_result.host_draw_vertex_count, 1,
                                                0, 0, 0);
    }
-@@ -4556,6 +4656,7 @@ bool VulkanCommandProcessor::IssueDraw_MemexportReadbackFullPath(uint32_t total_
+@@ -4556,6 +4773,7 @@ bool VulkanCommandProcessor::IssueDraw_MemexportReadbackFullPath(uint32_t total_
      readback_region.srcOffset = memexport_range.base_address_dwords << 2;
      readback_region.dstOffset = readback_offset;
      readback_region.size = memexport_range.size_bytes;
@@ -830,7 +947,7 @@ index 44aa9e2..6f18683 100644
      deferred_command_buffer_.CmdVkCopyBuffer(shared_memory_->buffer(), readback_buffer, 1,
                                               &readback_region);
      readback_offset += memexport_range.size_bytes;
-@@ -4681,6 +4782,7 @@ bool VulkanCommandProcessor::IssueDraw_MemexportReadbackFastPath(uint32_t total_
+@@ -4681,6 +4899,7 @@ bool VulkanCommandProcessor::IssueDraw_MemexportReadbackFastPath(uint32_t total_
      readback_region.srcOffset = memexport_range.base_address_dwords << 2;
      readback_region.dstOffset = readback_offset;
      readback_region.size = memexport_range.size_bytes;
@@ -838,7 +955,7 @@ index 44aa9e2..6f18683 100644
      deferred_command_buffer_.CmdVkCopyBuffer(shared_memory_->buffer(),
                                               readback.buffers[write_index], 1, &readback_region);
      readback_offset += memexport_range.size_bytes;
-@@ -4973,6 +5075,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
+@@ -4973,6 +5192,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
      deferred_command_buffer_.CmdVkBindDescriptorSets(VK_PIPELINE_BIND_POINT_COMPUTE,
                                                       resolve_downscale_pipeline_layout_, 0, 1,
                                                       &descriptor_set, 0, nullptr);
@@ -846,7 +963,7 @@ index 44aa9e2..6f18683 100644
      deferred_command_buffer_.CmdVkDispatch(tile_count, 1, 1);
  
      VkBufferMemoryBarrier downscale_barrier = {};
-@@ -4992,6 +5095,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
+@@ -4992,6 +5212,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
      readback_region.srcOffset = 0;
      readback_region.dstOffset = 0;
      readback_region.size = written_length;
@@ -854,7 +971,7 @@ index 44aa9e2..6f18683 100644
      deferred_command_buffer_.CmdVkCopyBuffer(resolve_downscale_buffer_,
                                               readback.buffers[write_index], 1, &readback_region);
    } else {
-@@ -5002,6 +5106,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
+@@ -5002,6 +5223,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
      readback_region.srcOffset = written_address;
      readback_region.dstOffset = 0;
      readback_region.size = written_length;
@@ -862,7 +979,7 @@ index 44aa9e2..6f18683 100644
      deferred_command_buffer_.CmdVkCopyBuffer(shared_memory_->buffer(),
                                               readback.buffers[write_index], 1, &readback_region);
    }
-@@ -5779,6 +5884,7 @@ bool VulkanCommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -5779,6 +6001,7 @@ bool VulkanCommandProcessor::BeginSubmission(bool is_guest_command) {
      // the end of the submission (when async pipeline object creation requests
      // are fulfilled).
      deferred_command_buffer_.Reset();
@@ -870,7 +987,7 @@ index 44aa9e2..6f18683 100644
  
      // Reset cached state of the command buffer.
      dynamic_viewport_update_needed_ = true;
-@@ -6001,6 +6107,7 @@ bool VulkanCommandProcessor::EndSubmission(bool is_swap) {
+@@ -6001,6 +6224,7 @@ bool VulkanCommandProcessor::EndSubmission(bool is_swap) {
      CloseQuerySegment();
  
      SubmitBarriers(true);
@@ -878,7 +995,7 @@ index 44aa9e2..6f18683 100644
  
      assert_false(command_buffers_writable_.empty());
      CommandBuffer command_buffer = command_buffers_writable_.back();
-@@ -6059,6 +6166,7 @@ bool VulkanCommandProcessor::EndSubmission(bool is_swap) {
+@@ -6059,6 +6283,7 @@ bool VulkanCommandProcessor::EndSubmission(bool is_swap) {
      current_submission_wait_semaphores_.clear();
      command_buffers_submitted_.emplace_back(submission_index, command_buffer);
      command_buffers_writable_.pop_back();

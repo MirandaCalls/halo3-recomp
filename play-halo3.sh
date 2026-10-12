@@ -8,6 +8,8 @@
 #   --fps          print the guest frame rate every 5 s (no effect yet: nothing reads
 #                  AUTOPORT_FPS; use AUTOPORT_STUTTER_LOG + tools/stutter-summary.awk)
 #   --novsync      allow immediate/mailbox present (old behaviour, uses more CPU)
+#   --metal-capture  macOS: `touch metal-captures/capture` while playing saves the
+#                  next frame as metal-captures/frame-<n>.gputrace (open in Xcode)
 #   --scale N      render at N x N internal resolution (Halo 3 is 1152x640)
 #   --pad DIR      enable the scripted pad (drive it with autoport/pad.sh DIR ...)
 #   --native       render with the xenon-gpu native renderer (rexgpu-xgpu plugin)
@@ -53,6 +55,10 @@ while [ $# -gt 0 ]; do
       ;;
     --keyboard) extra+=(--mnk_mode=true --mnk_mouse=true) ;;
     --fps) envs+=(AUTOPORT_FPS=1) ;;
+    --metal-capture)
+      mkdir -p "$ROOT/metal-captures"
+      envs+=(MTL_CAPTURE_ENABLED=1 AUTOPORT_METAL_CAPTURE="$ROOT/metal-captures")
+      ;;
     --native) plugin=xgpu ;;
     --instance)
       shift
@@ -93,7 +99,7 @@ while [ $# -gt 0 ]; do
       mkdir -p "$1"
       envs+=("AUTOPORT_INPUT_FILE=$(abspath "$1")/cmd.txt")
       ;;
-    -h|--help) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     --) shift; extra+=("$@"); break ;;
     *) echo "unknown option: $1 (see --help)" >&2; exit 1 ;;
   esac
