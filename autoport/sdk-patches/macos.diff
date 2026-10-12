@@ -493,6 +493,72 @@ index e405512..ab66f17 100644
                      "Use R16G16B16A16_UNORM for gamma render targets (more accurate than sRGB)")
      .lifecycle(rex::cvar::Lifecycle::kHotReload);
  REXCVAR_DEFINE_STRING(dump_shaders, "", "GPU", "Path to dump shaders to");
+diff --git a/src/graphics/pipeline/shader/spirv_translator_rb.cpp b/src/graphics/pipeline/shader/spirv_translator_rb.cpp
+index 34a9a81..42d17bd 100644
+--- a/src/graphics/pipeline/shader/spirv_translator_rb.cpp
++++ b/src/graphics/pipeline/shader/spirv_translator_rb.cpp
+@@ -10,6 +10,8 @@
+  */
+ 
+ #include <cstdint>
++#include <cstdlib>
++#include <cstring>
+ 
+ #include <SPIRV/GLSL.std.450.h>
+ 
+@@ -22,6 +24,29 @@
+ 
+ namespace rex::graphics {
+ 
++namespace {
++// autoport: AUTOPORT_ALPHA_TO_MASK changes the host render target path's
++// alpha-to-coverage emulation, to diagnose artifacts on cut-out foliage:
++// "nodither" drops the per-pixel dither offsets, "off" keeps every sample.
++// 0 = guest behavior, 1 = nodither, 2 = off.
++int AlphaToMaskDiagnosticMode() {
++  static const int mode = [] {
++    const char* value = std::getenv("AUTOPORT_ALPHA_TO_MASK");
++    if (!value) {
++      return 0;
++    }
++    if (!std::strcmp(value, "nodither")) {
++      return 1;
++    }
++    if (!std::strcmp(value, "off")) {
++      return 2;
++    }
++    return 0;
++  }();
++  return mode;
++}
++}  // namespace
++
+ spv::Id SpirvShaderTranslator::PreClampedFloat32To7e3(SpirvBuilder& builder, spv::Id f32_scalar,
+                                                       spv::Id ext_inst_glsl_std_450) {
+   // https://github.com/Microsoft/DirectXTex/blob/master/DirectXTex/DirectXTexConvert.cpp
+@@ -4069,6 +4094,11 @@ void SpirvShaderTranslator::FSI_AlphaToMask() {
+   // Convert offset to float (0.0, 1.0, 2.0, 3.0)
+   spv::Id threshold_offset =
+       builder_->createUnaryOp(spv::OpConvertUToF, type_float_, threshold_offset_uint);
++  // autoport: AUTOPORT_ALPHA_TO_MASK=nodither uses one threshold set for every
++  // pixel instead of the guest's 2x2 dither pattern (diagnostic).
++  if (AlphaToMaskDiagnosticMode() == 1) {
++    threshold_offset = builder_->makeFloatConstant(1.5f);
++  }
+ 
+   // Load alpha from RT0.w (oC0.w) once for all samples (optimization)
+   id_vector_temp_.clear();
+@@ -4171,6 +4201,10 @@ void SpirvShaderTranslator::FSI_AlphaToMask() {
+   id_vector_temp_.push_back(coverage_1x);
+   id_vector_temp_.push_back(block_msaa_disabled.getId());
+   spv::Id coverage_final = builder_->createOp(spv::OpPhi, type_uint_, id_vector_temp_);
++  // autoport: AUTOPORT_ALPHA_TO_MASK=off keeps every sample (diagnostic).
++  if (AlphaToMaskDiagnosticMode() == 2) {
++    coverage_final = builder_->makeUintConstant(0xFFFFFFFFu);
++  }
+ 
+   // Write coverage to gl_SampleMask and discard if zero (FBO mode only).
+   if (!edram_fragment_shader_interlock_) {
 diff --git a/src/graphics/vulkan/command_processor.cpp b/src/graphics/vulkan/command_processor.cpp
 index 44aa9e2..6f18683 100644
 --- a/src/graphics/vulkan/command_processor.cpp
