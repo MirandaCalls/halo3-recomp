@@ -98,15 +98,18 @@ else
   echo "patches applied"
 fi
 
-step "build the patched SDK (the long step)"
-if [ ! -x "$SDK/bin/rexglue" ]; then
-  run "$SRC" "cmake -S . -B out/build/src-release -G Ninja \
+step "build the patched SDK (the long step the first time)"
+# Every run: ninja only recompiles what changed, so updated patches get built
+# and installed, and an up-to-date SDK costs a few seconds.
+configure=""
+if [ ! -f "$SRC/out/build/src-release/build.ninja" ]; then
+  configure="cmake -S . -B out/build/src-release -G Ninja \
       -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ $ARCH_FLAGS \
       -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_INSTALL_PREFIX=$SDK && \
-    cmake --build out/build/src-release -j$NPROC && \
-    cmake --install out/build/src-release"
+      -DCMAKE_INSTALL_PREFIX=$SDK && "
 fi
+run "$SRC" "${configure}cmake --build out/build/src-release -j$NPROC && \
+  cmake --install out/build/src-release"
 
 step "port Halo 3 from $ISO"
 # The extracted disc lives in "Halo 3/" at the repo root (git-ignored). The pipeline
@@ -121,6 +124,19 @@ fi
 step "patched runtime"
 mkdir -p "$ROOT/tools/rexglue-h3/$LIBDIR"
 cp -f "$SDK/$LIBDIR/librexruntime.$DLEXT" "$ROOT/tools/rexglue-h3/$LIBDIR/librexruntime.$DLEXT"
+# macOS stages copies of the SDK's dylibs next to the game (it loads them via
+# @executable_path), refreshed only when the game relinks. Refresh them here so
+# an SDK-only fix reaches the game without rebuilding it.
+if [ "$HOST_OS" = macos ]; then
+  game_build=$ROOT/games/halo3/port/out/build/$BUILD_DIR_NAME
+  for staged in "$game_build"/*.dylib; do
+    [ -f "$staged" ] && [ ! -L "$staged" ] || continue
+    sdk_copy=$SDK/$LIBDIR/$(basename "$staged")
+    if [ -f "$sdk_copy" ]; then
+      cp -f "$sdk_copy" "$staged"
+    fi
+  done
+fi
 
 step "done"
 cat <<'EOF'
