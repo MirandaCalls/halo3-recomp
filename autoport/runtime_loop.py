@@ -88,14 +88,23 @@ def regenerate_and_build(manifest, root, args, logs, tag):
 
 
 def fix_from_log(manifest, root, args, logs):
-    text = args.from_log.read_text(errors="replace")
+    log = args.from_log
+    text = log.read_text(errors="replace")
     addrs = sorted({int(a, 16) for a in RE_FATAL.findall(text)})
     if not addrs:
-        print(f"no unregistered-call FATAL in {args.from_log}")
+        print(f"no unregistered-call FATAL in {log}")
+        return 1
+    # The module ranges are logged at startup, so once the log rotates
+    # (halo3.log -> halo3.1.log, ...) they are in an older file.
+    rotated = sorted(log.parent.glob(f"{log.stem}.*{log.suffix}"))
+    ranges = text + "".join(p.read_text(errors="replace") for p in rotated)
+    if not RE_TABLE.search(ranges):
+        print(f"{log} (and its rotated files) no longer has the module ranges logged at startup;\n"
+              "play again with --log_max_file_size_mb=200 so the log isn't rotated")
         return 1
     added = 0
     for addr in addrs:
-        stem = module_for(addr, text, manifest)
+        stem = module_for(addr, ranges, manifest)
         if stem is None:
             print(f"0x{addr:08X}: not in any module's code range, not auto-fixable")
         elif add_function(manifest, stem, addr):

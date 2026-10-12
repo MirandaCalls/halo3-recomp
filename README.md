@@ -67,7 +67,7 @@ setup's automatic runs never reached (it only plays the boot and menu), play to
 that point with a log, then add the missing functions and rebuild:
 
 ```bash
-./play-halo3.sh --name YourName -- --log_file="$PWD/halo3.log"
+./play-halo3.sh --name YourName -- --log_file="$PWD/halo3.log" --log_max_file_size_mb=200
 tools/add-missed-functions.sh halo3.log
 ```
 

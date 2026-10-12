@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fix "Call to invalid or unregistered function" crashes found while playing.
 #
-#   ./play-halo3.sh --name <gamertag> -- --log_file="$PWD/halo3.log"   # play until it crashes
+#   ./play-halo3.sh --name <gamertag> -- --log_file="$PWD/halo3.log" --log_max_file_size_mb=200
 #   tools/add-missed-functions.sh halo3.log
 #
 # The port's setup finds functions the recompiler missed by running the boot and
