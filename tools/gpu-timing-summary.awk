@@ -3,14 +3,28 @@
 #   awk -v from=25 -f tools/gpu-timing-summary.awk gpu-timing.log   # skip the first 25 s
 # Passes are grouped by kind, size and render targets; "per frame" divides by the
 # number of guest frames in the measured range. At 30 fps a frame has 33.3 ms.
+# Gaps between passes are grouped by the kinds of work recorded in them (the
+# letters in the log's last column, see gpu_pass_timer.h).
 /^#/ { if ($0 ~ /device|not supported|not timed/) notes[nnotes++] = $0; next }
 NF < 8 || $1 < from { next }
 {
   if (!($2 in seen)) { seen[$2] = 1; frames++ }
   if (first == "" || $1 < first) first = $1
   if (last == "" || $1 > last) last = $1
+  if ($5 > 0) {
+    gap += $5
+    # group by the letters only, so "t3p2" and "t1p1" are both "pt"
+    work = (NF >= 9) ? $9 : "?"
+    if (work != "-" && work != "?") {
+      letters = ""
+      for (c = 97; c <= 122; c++) { ch = sprintf("%c", c); if (index(work, ch)) letters = letters ch }
+      work = letters
+    }
+    if (!(work in w_ms)) wkeys[nwkeys++] = work
+    w_ms[work] += $5; w_n[work]++
+  }
+  if ($3 == "S" || $3 == "E") next  # submission markers only carry a gap
   ms = $4; passes++; total += ms; if (ms > 0) nonzero++
-  if ($5 > 0) gap += $5
   kind_ms[$3] += ms; kind_n[$3]++
   key = $3 " " $6 " " $8
   if (!(key in g_ms)) keys[nkeys++] = key
@@ -45,6 +59,20 @@ END {
     printf "  %8.2f %5.1f%% %8.1f %8.3f %8.3f  %s %s %.0f %s\n", g_ms[k] / frames, 100 * g_ms[k] / total,
            g_n[k] / frames, g_ms[k] / g_n[k], g_max[k], f[1], f[2], g_draws[k] / g_n[k], f[3]
   }
-  print "\nlongest single passes (seconds frame kind gpu_ms gap_ms size draws targets):"
+  if (nwkeys) {
+    print "\ntime between passes by the work recorded there:"
+    print "  (p barrier, t texture load, b mip blit, u memory upload, r resolve, c resolve clear,"
+    print "   k render target transfer, d resolve readback, m memexport readback, i index copy,"
+    print "   g swap, - nothing recorded, ? log without this column)"
+    printf "  %8s %6s %8s %8s  %s\n", "ms/frame", "share", "n/frame", "avg ms", "work"
+    for (r = 0; r < 12 && r < nwkeys; r++) {
+      best = -1
+      for (i = 0; i < nwkeys; i++) if (!(i in wused) && (best < 0 || w_ms[wkeys[i]] > w_ms[wkeys[best]])) best = i
+      wused[best] = 1; k = wkeys[best]
+      printf "  %8.2f %5.1f%% %8.1f %8.3f  %s\n", w_ms[k] / frames, 100 * w_ms[k] / gap,
+             w_n[k] / frames, w_ms[k] / w_n[k], k
+    }
+  }
+  print "\nlongest single passes (seconds frame kind gpu_ms gap_ms size draws targets gap_work):"
   for (i = 0; i < 5 && top_line[i] != ""; i++) print "  " top_line[i]
 }

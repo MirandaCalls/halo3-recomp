@@ -125,7 +125,9 @@ What differs from the Linux path:
 time, measured with Vulkan timestamp queries and read back without stalling. Each
 line records the pass's kind (the game's draws, an EDRAM transfer between render
 targets, or the copy to the window), its size, its guest draw count and its render
-target formats. `tools/gpu-timing-summary.awk` ranks the passes by GPU time per
+target formats, plus the GPU time since the previous pass and what was recorded
+in that gap (texture loads, resolves, uploads, barriers and so on).
+`tools/gpu-timing-summary.awk` ranks the passes and the gaps by GPU time per
 frame:
 
 ```sh
