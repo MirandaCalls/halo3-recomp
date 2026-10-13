@@ -128,15 +128,20 @@ What differs from the Linux path:
   (see below).
 - The runtime fix-up loop (`autoport/runtime_loop.py`) opens a real window on
   macOS rather than SDL's offscreen driver.
-- `--vulkan_shared_memory_host_import=true` (experimental, off by default) makes
-  the GPU use the guest's physical memory directly through
+- On macOS the GPU uses the guest's physical memory directly
+  (`--vulkan_shared_memory_host_import`, on by default there) through
   `VK_EXT_external_memory_host`, so guest data needs no uploads and GPU writes
-  land in guest memory. It falls back to the normal buffer if the import fails.
-  Resolve and memexport readbacks are skipped while it is on (the data is
-  already in guest memory), so `--readback_resolve` has no effect.
-- `play-halo3.sh` passes `--readback_resolve=fast` on macOS. Halo 3 sets its
-  exposure from a resolved image it reads back on the CPU; without readback the
+  land in guest memory. Halo 3 sets its exposure from a resolved image it reads
+  on the CPU, and this gives it the current frame's image with no readback.
+  Resolve and memexport readbacks are skipped while it is on, so
+  `--readback_resolve` has no effect. GPU time is the same as without it.
+- If the import fails (the log lacks "Shared memory: using guest physical
+  memory directly"), the normal buffer is used, and `play-halo3.sh`'s default
+  `--readback_resolve=fast` keeps the lighting right. Without either, the
   campaign renders almost black (the menu looks normal).
+- `AUTOPORT_PS_NAN=show` paints pixels whose pixel shader output is NaN or
+  infinite magenta; `AUTOPORT_PS_NAN=zero` replaces those values with 0
+  (diagnostics for single-pixel artifacts).
 - `--zt` finds the ZeroTier address on the `feth*` interfaces macOS uses.
 - `autoport/clean_shm.sh` is skipped (no `/dev/shm` on macOS).
 - MoltenVK has no `VK_EXT_graphics_pipeline_library`, so the patch's pipeline

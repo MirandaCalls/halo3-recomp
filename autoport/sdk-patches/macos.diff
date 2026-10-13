@@ -524,7 +524,7 @@ index e405512..ab66f17 100644
      .lifecycle(rex::cvar::Lifecycle::kHotReload);
  REXCVAR_DEFINE_STRING(dump_shaders, "", "GPU", "Path to dump shaders to");
 diff --git a/src/graphics/pipeline/shader/spirv_translator_rb.cpp b/src/graphics/pipeline/shader/spirv_translator_rb.cpp
-index 34a9a81..42d17bd 100644
+index 34a9a81..c902929 100644
 --- a/src/graphics/pipeline/shader/spirv_translator_rb.cpp
 +++ b/src/graphics/pipeline/shader/spirv_translator_rb.cpp
 @@ -10,6 +10,8 @@
@@ -536,7 +536,7 @@ index 34a9a81..42d17bd 100644
  
  #include <SPIRV/GLSL.std.450.h>
  
-@@ -22,6 +24,29 @@
+@@ -22,6 +24,50 @@
  
  namespace rex::graphics {
  
@@ -561,12 +561,71 @@ index 34a9a81..42d17bd 100644
 +  }();
 +  return mode;
 +}
++
++// autoport: AUTOPORT_PS_NAN finds pixel shaders that output NaN or infinity,
++// to diagnose single-pixel artifacts: "show" paints such pixels magenta,
++// "zero" replaces the NaN and infinite components with 0.
++// 0 = guest behavior, 1 = show, 2 = zero.
++int PixelShaderNaNDiagnosticMode() {
++  static const int mode = [] {
++    const char* value = std::getenv("AUTOPORT_PS_NAN");
++    if (!value) {
++      return 0;
++    }
++    if (!std::strcmp(value, "show")) {
++      return 1;
++    }
++    if (!std::strcmp(value, "zero")) {
++      return 2;
++    }
++    return 0;
++  }();
++  return mode;
++}
 +}  // namespace
 +
  spv::Id SpirvShaderTranslator::PreClampedFloat32To7e3(SpirvBuilder& builder, spv::Id f32_scalar,
                                                        spv::Id ext_inst_glsl_std_450) {
    // https://github.com/Microsoft/DirectXTex/blob/master/DirectXTex/DirectXTexConvert.cpp
-@@ -4069,6 +4094,11 @@ void SpirvShaderTranslator::FSI_AlphaToMask() {
+@@ -408,6 +454,37 @@ void SpirvShaderTranslator::CompleteFragmentShaderInMain() {
+ 
+   bool fsi_pixel_potentially_killed = false;
+ 
++  if (int nan_mode = PixelShaderNaNDiagnosticMode()) {
++    uint32_t nan_targets_remaining = current_shader().writes_color_targets();
++    uint32_t nan_target_index;
++    while (rex::bit_scan_forward(nan_targets_remaining, &nan_target_index)) {
++      nan_targets_remaining &= ~(UINT32_C(1) << nan_target_index);
++      spv::Id target = output_or_var_fragment_data_[nan_target_index];
++      if (target == spv::NoResult) {
++        continue;
++      }
++      spv::Id color = builder_->createLoad(target, spv::NoPrecision);
++      spv::Id not_finite = builder_->createBinOp(
++          spv::OpLogicalOr, type_bool4_, builder_->createUnaryOp(spv::OpIsNan, type_bool4_, color),
++          builder_->createUnaryOp(spv::OpIsInf, type_bool4_, color));
++      if (nan_mode == 1) {
++        id_vector_temp_.clear();
++        id_vector_temp_.push_back(const_float_1_);
++        id_vector_temp_.push_back(const_float_0_);
++        id_vector_temp_.push_back(const_float_1_);
++        id_vector_temp_.push_back(const_float_1_);
++        spv::Id magenta = builder_->makeCompositeConstant(type_float4_, id_vector_temp_);
++        color = builder_->createTriOp(
++            spv::OpSelect, type_float4_,
++            builder_->createUnaryOp(spv::OpAny, type_bool_, not_finite), magenta, color);
++      } else {
++        color = builder_->createTriOp(spv::OpSelect, type_float4_, not_finite, const_float4_0_,
++                                      color);
++      }
++      builder_->createStore(color, target);
++    }
++  }
++
+   if (current_shader().kills_pixels()) {
+     if (edram_fragment_shader_interlock_) {
+       fsi_pixel_potentially_killed = true;
+@@ -4069,6 +4146,11 @@ void SpirvShaderTranslator::FSI_AlphaToMask() {
    // Convert offset to float (0.0, 1.0, 2.0, 3.0)
    spv::Id threshold_offset =
        builder_->createUnaryOp(spv::OpConvertUToF, type_float_, threshold_offset_uint);
@@ -578,7 +637,7 @@ index 34a9a81..42d17bd 100644
  
    // Load alpha from RT0.w (oC0.w) once for all samples (optimization)
    id_vector_temp_.clear();
-@@ -4171,6 +4201,10 @@ void SpirvShaderTranslator::FSI_AlphaToMask() {
+@@ -4171,6 +4253,10 @@ void SpirvShaderTranslator::FSI_AlphaToMask() {
    id_vector_temp_.push_back(coverage_1x);
    id_vector_temp_.push_back(block_msaa_disabled.getId());
    spv::Id coverage_final = builder_->createOp(spv::OpPhi, type_uint_, id_vector_temp_);
@@ -1116,10 +1175,17 @@ index 9ba4cd2..ad757c0 100644
          MarkEdramBufferModified();
        }
 diff --git a/src/graphics/vulkan/shared_memory.cpp b/src/graphics/vulkan/shared_memory.cpp
-index 1ff4cab..b1c6c02 100644
+index 1ff4cab..489b849 100644
 --- a/src/graphics/vulkan/shared_memory.cpp
 +++ b/src/graphics/vulkan/shared_memory.cpp
-@@ -26,6 +26,14 @@
+@@ -20,12 +20,21 @@
+ #include <rex/graphics/vulkan/deferred_command_buffer.h>
+ #include <rex/graphics/vulkan/shared_memory.h>
+ #include <rex/logging.h>
++#include <rex/platform.h>
+ #include <rex/math.h>
+ #include <rex/ui/vulkan/util.h>
+ 
  REXCVAR_DEFINE_BOOL(vulkan_sparse_shared_memory, true, "GPU/Vulkan",
                      "Use sparse shared memory on Vulkan")
      .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
@@ -1127,14 +1193,14 @@ index 1ff4cab..b1c6c02 100644
 +// be the guest's physical memory itself through VK_EXT_external_memory_host:
 +// guest data needs no uploads and GPU writes (resolves, memexport) land directly
 +// in guest memory. Falls back to the normal buffer if the import isn't possible.
-+REXCVAR_DEFINE_BOOL(vulkan_shared_memory_host_import, false, "GPU/Vulkan",
++REXCVAR_DEFINE_BOOL(vulkan_shared_memory_host_import, REX_PLATFORM_MAC, "GPU/Vulkan",
 +                    "Use guest physical memory directly as the GPU shared memory buffer "
 +                    "(VK_EXT_external_memory_host, for unified-memory GPUs)")
 +    .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
  REXCVAR_DEFINE_BOOL(gpu_allow_invalid_upload_range, false, "GPU",
                      "Allows games to read data from pages that are marked as no access.");
  
-@@ -54,6 +62,10 @@ bool VulkanSharedMemory::Initialize() {
+@@ -54,6 +63,10 @@ bool VulkanSharedMemory::Initialize() {
    const VkBufferCreateFlags sparse_flags =
        VK_BUFFER_CREATE_SPARSE_BINDING_BIT | VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT;
  
@@ -1145,7 +1211,7 @@ index 1ff4cab..b1c6c02 100644
    // Try to create a sparse buffer.
    VkBufferCreateInfo buffer_create_info;
    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-@@ -65,7 +77,7 @@ bool VulkanSharedMemory::Initialize() {
+@@ -65,7 +78,7 @@ bool VulkanSharedMemory::Initialize() {
    buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
    buffer_create_info.queueFamilyIndexCount = 0;
    buffer_create_info.pQueueFamilyIndices = nullptr;
@@ -1154,7 +1220,7 @@ index 1ff4cab..b1c6c02 100644
        vulkan_device->properties().sparseResidencyBuffer) {
      if (dfn.vkCreateBuffer(device, &buffer_create_info, nullptr, &buffer_) == VK_SUCCESS) {
        VkMemoryRequirements buffer_memory_requirements;
-@@ -237,6 +249,81 @@ void VulkanSharedMemory::Use(Usage usage, std::pair<uint32_t, uint32_t> written_
+@@ -237,6 +250,81 @@ void VulkanSharedMemory::Use(Usage usage, std::pair<uint32_t, uint32_t> written_
    last_written_range_ = written_range;
  }
  
@@ -1236,7 +1302,7 @@ index 1ff4cab..b1c6c02 100644
  bool VulkanSharedMemory::AllocateSparseHostGpuMemoryRange(uint32_t offset_allocations,
                                                            uint32_t length_allocations) {
    if (!length_allocations) {
-@@ -283,6 +370,11 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
+@@ -283,6 +371,11 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
    if (!num_upload_ranges) {
      return true;
    }
@@ -1248,7 +1314,7 @@ index 1ff4cab..b1c6c02 100644
  
    auto& range_front = upload_page_ranges[0];
    auto& range_back = upload_page_ranges[num_upload_ranges - 1];
-@@ -338,6 +430,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
+@@ -338,6 +431,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
                    upload_buffer_size);
        if (upload_buffer_previous != upload_buffer && !upload_regions_.empty()) {
          assert_true(upload_buffer_previous != VK_NULL_HANDLE);
@@ -1256,7 +1322,7 @@ index 1ff4cab..b1c6c02 100644
          command_buffer.CmdVkCopyBuffer(upload_buffer_previous, buffer_,
                                         uint32_t(upload_regions_.size()), upload_regions_.data());
          upload_regions_.clear();
-@@ -357,6 +450,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
+@@ -357,6 +451,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
    }
    if (!upload_regions_.empty()) {
      assert_true(upload_buffer_previous != VK_NULL_HANDLE);
