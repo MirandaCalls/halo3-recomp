@@ -160,8 +160,8 @@ What differs from the Linux path:
   pass's depth, with a different vertex shader) toward passing, by that many
   depth units.
 - `AUTOPORT_EQUAL_DEPTH=lequal|gequal` relaxes "equal" depth tests, and
-  `AUTOPORT_EQUAL_DEPTH=noalphatest` drops the alpha test of draws with an equal
-  depth test and no depth write (diagnostics for pixels a multipass lighting
+  `AUTOPORT_EQUAL_DEPTH=noalphatest` drops the alpha test of draws with an equal,
+  "less or equal" or "greater or equal" depth test and no depth write (diagnostics for pixels a multipass lighting
   pass misses).
 - `AUTOPORT_PS_NAN=show` paints pixels whose pixel shader output is NaN or
   infinite magenta; `AUTOPORT_PS_NAN=zero` replaces those values with 0

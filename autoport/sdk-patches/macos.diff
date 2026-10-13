@@ -901,7 +901,7 @@ index 34a9a81..219e262 100644
    // Write coverage to gl_SampleMask and discard if zero (FBO mode only).
    if (!edram_fragment_shader_interlock_) {
 diff --git a/src/graphics/vulkan/command_processor.cpp b/src/graphics/vulkan/command_processor.cpp
-index 44aa9e2..ce968f3 100644
+index 44aa9e2..56311a7 100644
 --- a/src/graphics/vulkan/command_processor.cpp
 +++ b/src/graphics/vulkan/command_processor.cpp
 @@ -12,11 +12,20 @@
@@ -1632,27 +1632,29 @@ index 44aa9e2..ce968f3 100644
      }
    }
  
-@@ -6645,6 +7109,19 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6645,6 +7109,21 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
    xenos::CompareFunction alpha_test_function = rb_colorcontrol.alpha_test_enable
                                                     ? rb_colorcontrol.alpha_func
                                                     : xenos::CompareFunction::kAlways;
 +  // autoport: AUTOPORT_EQUAL_DEPTH=noalphatest drops the alpha test of draws
-+  // that only touch pixels with exactly the depth an earlier pass wrote (equal
-+  // test, no depth write), to tell alpha test mismatches between passes from
-+  // depth mismatches.
++  // that depth-test against an earlier pass without writing depth (equal,
++  // or Halo 3's reversed-depth "greater or equal" lighting pass), to tell
++  // alpha test mismatches between passes from depth mismatches.
 +  static const bool equal_depth_no_alpha_test = [] {
 +    const char* value = std::getenv("AUTOPORT_EQUAL_DEPTH");
 +    return value && !std::strcmp(value, "noalphatest");
 +  }();
 +  if (equal_depth_no_alpha_test && normalized_depth_control.z_enable &&
 +      !normalized_depth_control.z_write_enable &&
-+      normalized_depth_control.zfunc == xenos::CompareFunction::kEqual) {
++      (normalized_depth_control.zfunc == xenos::CompareFunction::kEqual ||
++       normalized_depth_control.zfunc == xenos::CompareFunction::kGreaterEqual ||
++       normalized_depth_control.zfunc == xenos::CompareFunction::kLessEqual)) {
 +    alpha_test_function = xenos::CompareFunction::kAlways;
 +  }
    flags |= uint32_t(alpha_test_function) << SpirvShaderTranslator::kSysFlag_AlphaPassIfLess_Shift;
    // Gamma writing.
    // Gamma targets stored as UNORM16 hold linear values for blending, and
-@@ -6939,6 +7416,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6939,6 +7418,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
          UINT32_C(0x3F800000) + (color_exp_bias << 23);
      dirty |= system_constants_.color_exp_bias[i] != color_exp_bias_scale;
      system_constants_.color_exp_bias[i] = color_exp_bias_scale;
