@@ -1,5 +1,9 @@
 # Halo 3 native renderer: research notes
 
+Status: paused. Halo 3 draws through pre-recorded PM4 command buffers (see
+"The command stream"), so a D3D-hook renderer would still have to emulate
+the command processor.
+
 Goal: replace Halo 3's Xbox D3D layer with a renderer that talks to Metal
 directly (the UnleashedRecomp approach), instead of emulating the Xenos GPU.
 These notes record what is known so far. Addresses are for the retail game
@@ -98,6 +102,44 @@ Compared with full emulation this still interprets Xenos register meanings
 formats), but skips the PM4 ring buffer, the command processor and, with
 resolves and render targets handled at the API level, the EDRAM emulation
 that costs the most on Apple GPUs.
+
+## The command stream (PM4 census)
+
+`AUTOPORT_PM4_STATS` (the emulator's PM4 census), ~2,700 frames from the menu
+into Sierra 117, per-frame averages over 300-frame windows:
+
+| Command | Per frame |
+|---|---|
+| `DRAW_INDX` (indexed draws) | 310–2,280 |
+| `DRAW_INDX_2` (inline-index draws) | 180–340 |
+| `IM_LOAD` (shader loads) | 400–3,600 |
+| `LOAD_ALU_CONSTANT` (constants from memory) | 440–4,150 |
+| Register writes, of which ALU constants | 42,000–284,000, 27,000–173,000 |
+| `INDIRECT_BUFFER` jumps | 165–1,600 buffers, 64,000–450,000 dwords (up to 1.8 MB) |
+| `VIZ_QUERY`, `SET_BIN_MASK_*` | up to ~260 and ~1,100 (predicated tiling, visibility) |
+
+Every draw is in an **indirect (called) command buffer**; the ring itself only
+holds jumps and a few conditional writes. Of 2,500–10,500 distinct command
+buffer addresses per 300 frames, 500–1,900 are used more than once: Halo 3
+replays **pre-recorded command buffers** (per mesh or per material) alongside
+per-frame ones. No engine or D3D function builds a `DRAW_INDX` header in code
+(`tools/guest-grep.py` finds only `DRAW_INDX_2` writers, all at init or for
+fixed-function passes), which fits draws being recorded once and replayed.
+
+### What this means
+
+Halo 3 doesn't drive the GPU through D3D calls at draw granularity. Its draws
+and much of their state reach the GPU as **raw PM4 command buffers**, many of
+them recorded ahead of time. A renderer that hooks D3D, or the D3D register
+shadow, would still have to execute those buffers, which means interpreting
+PM4 and Xenos register state just as the emulator's command processor does.
+
+So the "native renderer" route does not remove the expensive part for this
+game. What remains specific to it, handling render targets and resolves at
+the API level instead of emulating EDRAM, is equally available to an
+emulator backend that targets Apple GPUs directly (`docs/metal-renderer.md`),
+which needs no game-specific reverse engineering. The research here is paused
+in favour of that and the cheaper emulator-side improvements.
 
 ## Open questions
 
