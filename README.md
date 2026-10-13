@@ -139,6 +139,12 @@ What differs from the Linux path:
   memory directly"), the normal buffer is used, and `play-halo3.sh`'s default
   `--readback_resolve=fast` keeps the lighting right. Without either, the
   campaign renders almost black (the menu looks normal).
+- Vertex shaders mark their position output invariant where SPIRV-Cross reads
+  it (on the `gl_Position` member), so MoltenVK compiles them with Metal's
+  `preserveInvariance`. Halo 3 draws objects twice, the second (lighting) pass
+  with an "equal" depth test; without invariance, the two passes' positions
+  for wind-animated foliage differed slightly on some pixels, which kept the
+  first pass's unlit color (flickering green dots on ferns).
 - `AUTOPORT_PS_NAN=show` paints pixels whose pixel shader output is NaN or
   infinite magenta; `AUTOPORT_PS_NAN=zero` replaces those values with 0
   (diagnostics for single-pixel artifacts).

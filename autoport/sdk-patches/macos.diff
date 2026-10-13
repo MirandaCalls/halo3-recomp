@@ -553,6 +553,25 @@ index e405512..ab66f17 100644
                      "Use R16G16B16A16_UNORM for gamma render targets (more accurate than sRGB)")
      .lifecycle(rex::cvar::Lifecycle::kHotReload);
  REXCVAR_DEFINE_STRING(dump_shaders, "", "GPU", "Path to dump shaders to");
+diff --git a/src/graphics/pipeline/shader/spirv_translator.cpp b/src/graphics/pipeline/shader/spirv_translator.cpp
+index 3cffc7d..6f08221 100644
+--- a/src/graphics/pipeline/shader/spirv_translator.cpp
++++ b/src/graphics/pipeline/shader/spirv_translator.cpp
+@@ -1776,6 +1776,14 @@ void SpirvShaderTranslator::StartVertexOrTessEvalShaderBeforeMain() {
+   builder_->addMemberName(type_struct_per_vertex, kOutputPerVertexMemberPosition, "gl_Position");
+   builder_->addMemberDecoration(type_struct_per_vertex, kOutputPerVertexMemberPosition,
+                                 spv::DecorationBuiltIn, spv::BuiltInPosition);
++  // autoport: also on the member, where SPIRV-Cross looks for it (the
++  // decoration on the block variable below doesn't reach it), so the Metal
++  // shader gets [[position, invariant]] and MoltenVK compiles it with
++  // preserveInvariance. Without it, multipass rendering with "equal" depth
++  // testing (Halo 3's lighting pass over animated foliage) fails on some
++  // pixels, leaving the first pass's color behind.
++  builder_->addMemberDecoration(type_struct_per_vertex, kOutputPerVertexMemberPosition,
++                                spv::DecorationInvariant);
+   if (output_per_vertex_member_clip_distance_ != UINT32_MAX) {
+     builder_->addMemberName(type_struct_per_vertex, output_per_vertex_member_clip_distance_,
+                             "gl_ClipDistance");
 diff --git a/src/graphics/pipeline/shader/spirv_translator_alu.cpp b/src/graphics/pipeline/shader/spirv_translator_alu.cpp
 index 1d7dd08..e48f31a 100644
 --- a/src/graphics/pipeline/shader/spirv_translator_alu.cpp
