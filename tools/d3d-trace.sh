@@ -32,7 +32,12 @@ if [ "${1:-}" = --remove ]; then
 else
   mkdir -p autoport_logs
   "$PY" "$ROOT/autoport/gpu/triage.py" halo3_manifest.toml --json autoport_logs/d3d-triage.json >/dev/null
-  "$PY" "$ROOT/autoport/gpu/gen_d3d_tracer.py" halo3_manifest.toml autoport_logs/d3d-triage.json --out "$TRACER"
+  # Halo 3's D3D library is linked in two blocks: triage finds the one at
+  # 825A0000; the ring buffer writer (82147618) and fixed-function draws are in
+  # a second block around 82140000, likely with the draw path
+  # (docs/halo3-native-renderer.md).
+  "$PY" "$ROOT/autoport/gpu/gen_d3d_tracer.py" halo3_manifest.toml autoport_logs/d3d-triage.json \
+    --range 82140000-821A0000 --out "$TRACER"
   if ! grep -qF "$MARKER" CMakeLists.txt; then
     cat >> CMakeLists.txt <<'EOF'
 
