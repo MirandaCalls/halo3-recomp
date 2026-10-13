@@ -184,8 +184,10 @@ time skipping it saves. It's a diagnostic: the skipped effect is missing.
 
 To find the shader behind an artifact, bisect live: run the game with
 `AUTOPORT_SKIP_SHADERS_FILE` and, standing where the artifact shows,
-`tools/shader-bisect.py` in a second terminal. It skips half of the shaders on
-screen at a time and asks whether the artifact is still there:
+`tools/shader-bisect.py` in a second terminal. It skips groups of the shaders
+on screen and asks whether the artifact is still there; when a group breaks the
+whole view (lighting, post-processing), answer `b` and it narrows down and sets
+aside the shaders responsible:
 
 ```sh
 AUTOPORT_SKIP_SHADERS_FILE=$PWD/shader-skip.txt ./play-halo3.sh --name <gamertag>

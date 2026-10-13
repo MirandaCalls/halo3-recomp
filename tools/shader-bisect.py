@@ -6,9 +6,10 @@
 
 Stand still where the artifact is visible. The script reads the pixel shaders
 the game drew in the last two seconds (<file>.used, written by the emulator),
-then skips half of them at a time through <file> (reloaded within a quarter of a
-second) and asks whether the artifact is still there. Each round tests both
-halves, so a half whose skipping hides everything doesn't mislead it. The
+then skips groups of them through <file> (reloaded within a quarter of a
+second) and asks whether the artifact is still there. When skipping a group
+breaks the view (lighting, post-processing), answer "b": it splits that group
+further and sets the shaders that break it aside. The
 answer is checked at the end by skipping that one shader alone.
 """
 import argparse
@@ -19,9 +20,9 @@ from pathlib import Path
 
 def ask(question):
     while True:
-        answer = input(f"{question} [y = still there / n = gone] ").strip().lower()
-        if answer in ("y", "n"):
-            return answer == "y"
+        answer = input(f"{question}\n  [y = dots still there / n = gone / b = view too broken to tell] ").strip().lower()
+        if answer in ("y", "n", "b"):
+            return answer
 
 
 def skip(path, hashes):
@@ -53,36 +54,44 @@ def split(candidates, draws):
 
 
 def bisect(path, candidates, draws):
-    pending = []  # halves set aside when both halves hid the artifact
-    while True:
-        while len(candidates) > 1:
-            a, b = split(candidates, draws)
-            print(f"\n{len(candidates)} candidate shaders; testing two halves of {len(a)} and {len(b)}")
-            skip(path, a)
-            a_there = ask("Half 1 skipped. Is the artifact still there?")
-            skip(path, b)
-            b_there = ask("Half 2 skipped. Is the artifact still there?")
-            if not a_there and b_there:
-                candidates = a
-            elif a_there and not b_there:
-                candidates = b
-            elif not a_there and not b_there:
-                print("Both halves hide it (one may hide the whole area); following half 1 first.")
-                pending.append(b)
-                candidates = a
-            else:
-                print("Skipping either half leaves it, so it doesn't come from a single pixel "
-                      "shader (or needs shaders from both halves).")
-                return None
-        if candidates:
-            shader = candidates[0]
-            skip(path, [shader])
-            if not ask(f"Only {shader} skipped. Is the artifact still there?"):
-                return shader
-            print("Not this one alone.")
-        if not pending:
+    """Narrow candidates down to the shader whose skipping removes the dots.
+
+    Each round splits the candidates in two and skips one group at a time
+    until a group removes the dots. Skipping some shaders (lighting,
+    post-processing) breaks the whole view; a group that does is split until
+    those shaders are found, and they are set aside. Assumes one shader is
+    responsible.
+    """
+    breaking = []
+    while len(candidates) > 1:
+        print(f"\n{len(candidates)} candidate shaders left"
+              + (f" ({len(breaking)} set aside for breaking the view)" if breaking else ""))
+        groups = list(split(candidates, draws))
+        found = None
+        while groups and found is None:
+            group = groups.pop(0)
+            skip(path, group)
+            answer = ask(f"Skipping {len(group)} shader(s). Are the dots still there?")
+            if answer == "n":
+                found = group
+            elif answer == "b":
+                if len(group) == 1:
+                    print(f"  {group[0]} breaks the view; setting it aside.")
+                    breaking.append(group[0])
+                else:
+                    groups[:0] = list(split(group, draws))
+        if found is None:
+            print("\nNo testable group removed the dots.")
+            if breaking:
+                print("The shader may be one of those that break the view: " + ", ".join(breaking))
             return None
-        candidates = pending.pop()
+        candidates = found
+    shader = candidates[0]
+    skip(path, [shader])
+    if ask(f"Only {shader} skipped. Are the dots still there?") == "n":
+        return shader
+    print("Skipping it alone doesn't remove them (the dots may need more than one shader).")
+    return None
 
 
 def main():
