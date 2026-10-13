@@ -181,7 +181,9 @@ inflate the totals, so use it to rank draws, not to measure the frame rate.
 debugger stops on the faults the runtime uses to watch GPU memory). While playing,
 `touch metal-captures/capture` saves the next 3 frames as
 `metal-captures/frame-<n>.gputrace`, which Xcode opens with pixel history and
-shader debugging.
+shader debugging. With `--metal-capture`, each guest draw is wrapped in a debug
+group named after its shaders (`vs <hash> ps <hash>`), so a draw can be found
+in Xcode by typing a shader hash into the navigator's filter.
 
 `AUTOPORT_SKIP_SHADERS=<hash>[,<hash>...]` drops every draw that uses one of those
 vertex or pixel shaders, to see what an expensive shader draws and how much GPU
