@@ -145,6 +145,16 @@ What differs from the Linux path:
   with an "equal" depth test; without invariance, the two passes' positions
   for wind-animated foliage differed slightly on some pixels, which kept the
   first pass's unlit color (flickering green dots on ferns).
+- `AUTOPORT_DRAW_LOG=<file>` records the state of every draw of two frames
+  once `<file>.trigger` exists; `tools/draw-log-pairs.py <file>` lines up the
+  passes of multipass draws (same index and vertex buffers, different shaders)
+  and marks the state that differs between them:
+
+  ```sh
+  AUTOPORT_DRAW_LOG=$PWD/draws.log ./play-halo3.sh --name <gamertag>
+  touch draws.log.trigger        # while looking at the artifact
+  tools/draw-log-pairs.py draws.log > pairs.txt
+  ```
 - `AUTOPORT_EQUAL_DEPTH=lequal|gequal` relaxes "equal" depth tests, and
   `AUTOPORT_EQUAL_DEPTH=noalphatest` drops the alpha test of draws with an equal
   depth test and no depth write (diagnostics for pixels a multipass lighting
