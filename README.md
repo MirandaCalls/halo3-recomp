@@ -146,6 +146,11 @@ What differs from the Linux path:
   render targets to the guest format's range (0 to 31.875, alpha 0 to 1). The
   host render target path stores them as 16-bit float, which also keeps
   negative and larger values (a candidate for the green dots on ferns).
+- `AUTOPORT_FLUSH_DENORMALS=1` treats denormal floats as zero where Xenos does:
+  in the "0 × anything = 0" rule of multiplications and dot products, and in
+  the inputs of `rcp`, `rsq` and `log`. Halo 3's tone mapping pass
+  (`373E65D9ADCF4380`) divides by the pixel's brightness, so a denormal there
+  would overflow to infinity instead of giving black.
 - `--zt` finds the ZeroTier address on the `feth*` interfaces macOS uses.
 - `autoport/clean_shm.sh` is skipped (no `/dev/shm` on macOS).
 - MoltenVK has no `VK_EXT_graphics_pipeline_library`, so the patch's pipeline

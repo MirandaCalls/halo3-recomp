@@ -523,6 +523,163 @@ index e405512..ab66f17 100644
                      "Use R16G16B16A16_UNORM for gamma render targets (more accurate than sRGB)")
      .lifecycle(rex::cvar::Lifecycle::kHotReload);
  REXCVAR_DEFINE_STRING(dump_shaders, "", "GPU", "Path to dump shaders to");
+diff --git a/src/graphics/pipeline/shader/spirv_translator_alu.cpp b/src/graphics/pipeline/shader/spirv_translator_alu.cpp
+index 1d7dd08..e48f31a 100644
+--- a/src/graphics/pipeline/shader/spirv_translator_alu.cpp
++++ b/src/graphics/pipeline/shader/spirv_translator_alu.cpp
+@@ -12,6 +12,7 @@
+ #include <cfloat>
+ #include <cmath>
+ #include <cstdint>
++#include <cstdlib>
+ #include <memory>
+ 
+ #include <SPIRV/GLSL.std.450.h>
+@@ -22,6 +23,30 @@
+ 
+ namespace rex::graphics {
+ 
++namespace {
++// autoport: AUTOPORT_FLUSH_DENORMALS=1 treats denormal values as zero where
++// Xenos does and the host GPU may not: in the "0 * anything = 0" rule of
++// multiplication, and in the inputs of rcp, rsq and log (where a denormal
++// gives an infinity or a huge value instead of the result for 0).
++bool FlushDenormalsEnabled() {
++  static const bool enabled = std::getenv("AUTOPORT_FLUSH_DENORMALS") != nullptr;
++  return enabled;
++}
++
++spv::Id FlushDenormalScalar(SpirvBuilder& builder, spv::Id type_float, spv::Id type_bool,
++                            spv::Id ext_inst_glsl_std_450, spv::Id value) {
++  if (!FlushDenormalsEnabled()) {
++    return value;
++  }
++  spv::Id is_denormal = builder.createBinOp(
++      spv::OpFOrdLessThan, type_bool,
++      builder.createUnaryBuiltinCall(type_float, ext_inst_glsl_std_450, GLSLstd450FAbs, value),
++      builder.makeFloatConstant(FLT_MIN));
++  return builder.createTriOp(spv::OpSelect, type_float, is_denormal,
++                             builder.makeFloatConstant(0.0f), value);
++}
++}  // namespace
++
+ spv::Id SpirvShaderTranslator::ZeroIfAnyOperandIsZero(spv::Id value, spv::Id operand_0_abs,
+                                                       spv::Id operand_1_abs) {
+   EnsureBuildPointAvailable();
+@@ -31,10 +56,10 @@ spv::Id SpirvShaderTranslator::ZeroIfAnyOperandIsZero(spv::Id value, spv::Id ope
+   return builder_->createTriOp(
+       spv::OpSelect, type_float_,
+       builder_->createBinOp(
+-          spv::OpFOrdEqual, type_bool_,
++          FlushDenormalsEnabled() ? spv::OpFOrdLessThan : spv::OpFOrdEqual, type_bool_,
+           builder_->createBinBuiltinCall(type_float_, ext_inst_glsl_std_450_, GLSLstd450NMin,
+                                          operand_0_abs, operand_1_abs),
+-          const_float_0_),
++          FlushDenormalsEnabled() ? builder_->makeFloatConstant(FLT_MIN) : const_float_0_),
+       const_float_0_, value);
+ }
+ 
+@@ -233,11 +258,22 @@ spv::Id SpirvShaderTranslator::ProcessVectorAluOperation(
+           different_operands[i] =
+               GetAbsoluteOperand(different_operands[i], instr.vector_operands[i]);
+         }
++        spv::Id different_zero_threshold = const_float_vectors_0_[different_count - 1];
++        if (FlushDenormalsEnabled()) {
++          different_zero_threshold = builder_->makeFloatConstant(FLT_MIN);
++          if (different_count > 1) {
++            id_vector_temp_util_.clear();
++            id_vector_temp_util_.resize(different_count, different_zero_threshold);
++            different_zero_threshold =
++                builder_->makeCompositeConstant(different_type, id_vector_temp_util_);
++          }
++        }
+         spv::Id different_zero = builder_->createBinOp(
+-            spv::OpFOrdEqual, type_bool_vectors_[different_count - 1],
++            FlushDenormalsEnabled() ? spv::OpFOrdLessThan : spv::OpFOrdEqual,
++            type_bool_vectors_[different_count - 1],
+             builder_->createBinBuiltinCall(different_type, ext_inst_glsl_std_450_, GLSLstd450NMin,
+                                            different_operands[0], different_operands[1]),
+-            const_float_vectors_0_[different_count - 1]);
++            different_zero_threshold);
+         // Replace with +0.
+         different_result =
+             builder_->createTriOp(spv::OpSelect, different_type, different_zero,
+@@ -1088,7 +1124,8 @@ spv::Id SpirvShaderTranslator::ProcessScalarAluOperation(
+     case ucode::AluScalarOpcode::kLog: {
+       spv::Id result = builder_->createUnaryBuiltinCall(
+           type_float_, ext_inst_glsl_std_450_, GLSLstd450Log2,
+-          GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001));
++          FlushDenormalScalar(*builder_, type_float_, type_bool_, ext_inst_glsl_std_450_,
++                              GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001)));
+       return ReduceFloatPrecision(result, 21);
+     }
+     case ucode::AluScalarOpcode::kSqrt: {
+@@ -1100,13 +1137,15 @@ spv::Id SpirvShaderTranslator::ProcessScalarAluOperation(
+     case ucode::AluScalarOpcode::kRsq: {
+       spv::Id result = builder_->createUnaryBuiltinCall(
+           type_float_, ext_inst_glsl_std_450_, GLSLstd450InverseSqrt,
+-          GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001));
++          FlushDenormalScalar(*builder_, type_float_, type_bool_, ext_inst_glsl_std_450_,
++                              GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001)));
+       return ReduceFloatPrecision(result, 21);
+     }
+     case ucode::AluScalarOpcode::kLogc: {
+       spv::Id result = builder_->createUnaryBuiltinCall(
+           type_float_, ext_inst_glsl_std_450_, GLSLstd450Log2,
+-          GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001));
++          FlushDenormalScalar(*builder_, type_float_, type_bool_, ext_inst_glsl_std_450_,
++                              GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001)));
+       result = ReduceFloatPrecision(result, 21);
+       return builder_->createTriOp(spv::OpSelect, type_float_,
+                                    builder_->createBinOp(spv::OpFOrdEqual, type_bool_, result,
+@@ -1116,7 +1155,8 @@ spv::Id SpirvShaderTranslator::ProcessScalarAluOperation(
+     case ucode::AluScalarOpcode::kRcpc: {
+       spv::Id result = builder_->createNoContractionBinOp(
+           spv::OpFDiv, type_float_, const_float_1_,
+-          GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001));
++          FlushDenormalScalar(*builder_, type_float_, type_bool_, ext_inst_glsl_std_450_,
++                              GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001)));
+       result = ReduceFloatPrecision(result, 21);
+       result = builder_->createTriOp(spv::OpSelect, type_float_,
+                                      builder_->createBinOp(spv::OpFOrdEqual, type_bool_, result,
+@@ -1130,7 +1170,8 @@ spv::Id SpirvShaderTranslator::ProcessScalarAluOperation(
+     case ucode::AluScalarOpcode::kRcpf: {
+       spv::Id result = builder_->createNoContractionBinOp(
+           spv::OpFDiv, type_float_, const_float_1_,
+-          GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001));
++          FlushDenormalScalar(*builder_, type_float_, type_bool_, ext_inst_glsl_std_450_,
++                              GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001)));
+       result = ReduceFloatPrecision(result, 21);
+       result = builder_->createTriOp(spv::OpSelect, type_float_,
+                                      builder_->createBinOp(spv::OpFOrdEqual, type_bool_, result,
+@@ -1148,13 +1189,15 @@ spv::Id SpirvShaderTranslator::ProcessScalarAluOperation(
+     case ucode::AluScalarOpcode::kRcp: {
+       spv::Id result = builder_->createNoContractionBinOp(
+           spv::OpFDiv, type_float_, const_float_1_,
+-          GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001));
++          FlushDenormalScalar(*builder_, type_float_, type_bool_, ext_inst_glsl_std_450_,
++                              GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001)));
+       return ReduceFloatPrecision(result, 21);
+     }
+     case ucode::AluScalarOpcode::kRsqc: {
+       spv::Id result = builder_->createUnaryBuiltinCall(
+           type_float_, ext_inst_glsl_std_450_, GLSLstd450InverseSqrt,
+-          GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001));
++          FlushDenormalScalar(*builder_, type_float_, type_bool_, ext_inst_glsl_std_450_,
++                              GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001)));
+       result = ReduceFloatPrecision(result, 21);
+       result = builder_->createTriOp(spv::OpSelect, type_float_,
+                                      builder_->createBinOp(spv::OpFOrdEqual, type_bool_, result,
+@@ -1168,7 +1211,8 @@ spv::Id SpirvShaderTranslator::ProcessScalarAluOperation(
+     case ucode::AluScalarOpcode::kRsqf: {
+       spv::Id result = builder_->createUnaryBuiltinCall(
+           type_float_, ext_inst_glsl_std_450_, GLSLstd450InverseSqrt,
+-          GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001));
++          FlushDenormalScalar(*builder_, type_float_, type_bool_, ext_inst_glsl_std_450_,
++                              GetOperandComponents(operand_storage[0], instr.scalar_operands[0], 0b0001)));
+       result = ReduceFloatPrecision(result, 21);
+       result = builder_->createTriOp(spv::OpSelect, type_float_,
+                                      builder_->createBinOp(spv::OpFOrdEqual, type_bool_, result,
 diff --git a/src/graphics/pipeline/shader/spirv_translator_rb.cpp b/src/graphics/pipeline/shader/spirv_translator_rb.cpp
 index 34a9a81..219e262 100644
 --- a/src/graphics/pipeline/shader/spirv_translator_rb.cpp
