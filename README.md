@@ -164,6 +164,8 @@ What differs from the Linux path:
   alpha-tests foliage at 0.502 in both its albedo and lighting passes with the
   same texture and settings; on the host the two shaders can sample a leaf-edge
   alpha on either side of the cutoff, leaving unlit (bright green) pixels.
+- `AUTOPORT_TEXTURE_GAMMA=off` treats gamma texture components as plain
+  (diagnostic; colors wash out).
 - `AUTOPORT_EQUAL_DEPTH=lequal|gequal` relaxes "equal" depth tests, and
   `AUTOPORT_EQUAL_DEPTH=noalphatest` drops the alpha test of draws with an equal,
   "less or equal" or "greater or equal" depth test and no depth write (diagnostics for pixels a multipass lighting
