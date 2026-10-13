@@ -142,6 +142,10 @@ What differs from the Linux path:
 - `AUTOPORT_PS_NAN=show` paints pixels whose pixel shader output is NaN or
   infinite magenta; `AUTOPORT_PS_NAN=zero` replaces those values with 0
   (diagnostics for single-pixel artifacts).
+- `AUTOPORT_FLOAT_RT_CLAMP=1` clamps colors written to `k_2_10_10_10_FLOAT`
+  render targets to the guest format's range (0 to 31.875, alpha 0 to 1). The
+  host render target path stores them as 16-bit float, which also keeps
+  negative and larger values (a candidate for the green dots on ferns).
 - `--zt` finds the ZeroTier address on the `feth*` interfaces macOS uses.
 - `autoport/clean_shm.sh` is skipped (no `/dev/shm` on macOS).
 - MoltenVK has no `VK_EXT_graphics_pipeline_library`, so the patch's pipeline
