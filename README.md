@@ -160,10 +160,14 @@ What differs from the Linux path:
   pass's depth, with a different vertex shader) toward passing, by that many
   depth units.
 - `AUTOPORT_PASS2_ALPHA_EPSILON=<e>` lowers the alpha test cutoff by `e` for
-  draws that depth-test against an earlier pass without writing depth. Halo 3
-  alpha-tests foliage at 0.502 in both its albedo and lighting passes with the
-  same texture and settings; on the host the two shaders can sample a leaf-edge
-  alpha on either side of the cutoff, leaving unlit (bright green) pixels.
+  draws that depth-test against an earlier pass without writing depth (0.35 by
+  default on macOS, `0` turns it off). Halo 3 alpha-tests foliage at 0.502 in
+  both its albedo and lighting passes with the same texture and settings, but on
+  Apple GPUs the lighting pass can pick a smaller mip at leaf edges (forcing the
+  most detailed mip with `AUTOPORT_TEXTURE_LOD0=1` removes the effect), so its
+  alpha drops below the cutoff and the unlit albedo stays: flickering green dots
+  on ferns. The lower cutoff hides most of them; the root cause (how the
+  lighting pass's texture coordinate derivatives come out) is still open.
 - `AUTOPORT_TEXTURE_LOD0=1` samples 2D textures with zero gradients, i.e. the
   most detailed mip (diagnostic; distant textures shimmer).
 - `AUTOPORT_TEXTURE_GAMMA=off` treats gamma texture components as plain

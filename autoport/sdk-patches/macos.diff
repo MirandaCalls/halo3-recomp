@@ -928,7 +928,7 @@ index 34a9a81..219e262 100644
    // Write coverage to gl_SampleMask and discard if zero (FBO mode only).
    if (!edram_fragment_shader_interlock_) {
 diff --git a/src/graphics/vulkan/command_processor.cpp b/src/graphics/vulkan/command_processor.cpp
-index 44aa9e2..8e4ddf9 100644
+index 44aa9e2..71e141e 100644
 --- a/src/graphics/vulkan/command_processor.cpp
 +++ b/src/graphics/vulkan/command_processor.cpp
 @@ -12,11 +12,20 @@
@@ -1739,7 +1739,7 @@ index 44aa9e2..8e4ddf9 100644
        uint32_t texture_signs_shifted = uint32_t(texture_signs) << texture_signs_shift;
        uint32_t texture_signs_mask = ((UINT32_C(1) << 8) - 1) << texture_signs_shift;
        dirty |= (texture_signs_uint & texture_signs_mask) != texture_signs_shifted;
-@@ -6884,6 +7414,35 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6884,6 +7414,40 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
    }
  
    // Alpha test.
@@ -1750,9 +1750,14 @@ index 44aa9e2..8e4ddf9 100644
 +  // in both its albedo and lighting passes with the same texture and
 +  // settings; on the host, the two separately compiled shaders can land on
 +  // either side of the cutoff at leaf edges, which leaves unlit pixels.
++  // On macOS it's 0.35 by default: on Apple GPUs the second pass can pick a
++  // smaller mip of the leaf texture at leaf edges (its alpha drops well below
++  // the first pass's), and 0.35 removes most of the resulting green dots on
++  // Halo 3's ferns without visible fringes. AUTOPORT_PASS2_ALPHA_EPSILON=0
++  // turns it off.
 +  static const float pass2_alpha_epsilon = [] {
 +    const char* value = std::getenv("AUTOPORT_PASS2_ALPHA_EPSILON");
-+    return value ? float(std::atof(value)) : 0.0f;
++    return value ? float(std::atof(value)) : (REX_PLATFORM_MAC ? 0.35f : 0.0f);
 +  }();
 +  if (pass2_alpha_epsilon != 0.0f && normalized_depth_control.z_enable &&
 +      !normalized_depth_control.z_write_enable &&
@@ -1775,7 +1780,7 @@ index 44aa9e2..8e4ddf9 100644
    dirty |= system_constants_.alpha_test_reference != rb_alpha_ref;
    system_constants_.alpha_test_reference = rb_alpha_ref;
    uint32_t alpha_to_mask =
-@@ -6939,6 +7498,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6939,6 +7503,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
          UINT32_C(0x3F800000) + (color_exp_bias << 23);
      dirty |= system_constants_.color_exp_bias[i] != color_exp_bias_scale;
      system_constants_.color_exp_bias[i] = color_exp_bias_scale;
