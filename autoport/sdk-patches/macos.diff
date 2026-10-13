@@ -901,7 +901,7 @@ index 34a9a81..219e262 100644
    // Write coverage to gl_SampleMask and discard if zero (FBO mode only).
    if (!edram_fragment_shader_interlock_) {
 diff --git a/src/graphics/vulkan/command_processor.cpp b/src/graphics/vulkan/command_processor.cpp
-index 44aa9e2..4332bee 100644
+index 44aa9e2..ce968f3 100644
 --- a/src/graphics/vulkan/command_processor.cpp
 +++ b/src/graphics/vulkan/command_processor.cpp
 @@ -12,11 +12,20 @@
@@ -1573,7 +1573,39 @@ index 44aa9e2..4332bee 100644
  
      submission_open_ = false;
  
-@@ -6533,6 +6959,7 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6348,6 +6774,31 @@ void VulkanCommandProcessor::UpdateDynamicState(const draw_util::ViewportInfo& v
+                                  float(std::max(render_target_cache_->draw_resolution_scale_x(),
+                                                 render_target_cache_->draw_resolution_scale_y()));
+     }
++    // autoport: AUTOPORT_PASS2_DEPTH_BIAS=<units> moves draws that depth-test
++    // without writing depth (later passes of multipass rendering) toward
++    // passing their test by that many depth units, absorbing tiny position
++    // differences between the passes' vertex shaders.
++    static const float pass2_depth_bias = [] {
++      const char* value = std::getenv("AUTOPORT_PASS2_DEPTH_BIAS");
++      return value ? float(std::atof(value)) : 0.0f;
++    }();
++    if (pass2_depth_bias != 0.0f) {
++      auto depth_control = draw_util::GetNormalizedDepthControl(regs);
++      if (depth_control.z_enable && !depth_control.z_write_enable) {
++        switch (depth_control.zfunc) {
++          case xenos::CompareFunction::kGreater:
++          case xenos::CompareFunction::kGreaterEqual:
++            depth_bias_constant_factor += pass2_depth_bias;
++            break;
++          case xenos::CompareFunction::kLess:
++          case xenos::CompareFunction::kLessEqual:
++            depth_bias_constant_factor -= pass2_depth_bias;
++            break;
++          default:
++            break;
++        }
++      }
++    }
+     // std::memcmp instead of != so in case of NaN, every draw won't be
+     // invalidating it.
+     dynamic_depth_bias_update_needed_ |=
+@@ -6533,6 +6984,7 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
    // flow.
    reg::RB_COLOR_INFO color_infos[xenos::kMaxColorRenderTargets];
    float rt_clamp[4][4];
@@ -1581,7 +1613,7 @@ index 44aa9e2..4332bee 100644
    // Two UINT32_MAX if no components actually existing in the RT are written.
    uint32_t rt_keep_masks[4][2];
    for (uint32_t i = 0; i < xenos::kMaxColorRenderTargets; ++i) {
-@@ -6542,6 +6969,18 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6542,6 +6994,18 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
        RenderTargetCache::GetPSIColorFormatInfo(
            color_info.color_format, (normalized_color_mask >> (i * 4)) & 0b1111, rt_clamp[i][0],
            rt_clamp[i][1], rt_clamp[i][2], rt_clamp[i][3], rt_keep_masks[i][0], rt_keep_masks[i][1]);
@@ -1600,7 +1632,7 @@ index 44aa9e2..4332bee 100644
      }
    }
  
-@@ -6645,6 +7084,19 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6645,6 +7109,19 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
    xenos::CompareFunction alpha_test_function = rb_colorcontrol.alpha_test_enable
                                                     ? rb_colorcontrol.alpha_func
                                                     : xenos::CompareFunction::kAlways;
@@ -1620,7 +1652,7 @@ index 44aa9e2..4332bee 100644
    flags |= uint32_t(alpha_test_function) << SpirvShaderTranslator::kSysFlag_AlphaPassIfLess_Shift;
    // Gamma writing.
    // Gamma targets stored as UNORM16 hold linear values for blending, and
-@@ -6939,6 +7391,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6939,6 +7416,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
          UINT32_C(0x3F800000) + (color_exp_bias << 23);
      dirty |= system_constants_.color_exp_bias[i] != color_exp_bias_scale;
      system_constants_.color_exp_bias[i] = color_exp_bias_scale;

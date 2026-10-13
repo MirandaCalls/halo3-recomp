@@ -155,6 +155,10 @@ What differs from the Linux path:
   touch draws.log.trigger        # while looking at the artifact
   tools/draw-log-pairs.py draws.log > pairs.txt
   ```
+- `AUTOPORT_PASS2_DEPTH_BIAS=<units>` biases draws that depth-test without
+  writing depth (Halo 3's lighting pass: "greater or equal" against the albedo
+  pass's depth, with a different vertex shader) toward passing, by that many
+  depth units.
 - `AUTOPORT_EQUAL_DEPTH=lequal|gequal` relaxes "equal" depth tests, and
   `AUTOPORT_EQUAL_DEPTH=noalphatest` drops the alpha test of draws with an equal
   depth test and no depth write (diagnostics for pixels a multipass lighting
