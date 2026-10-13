@@ -178,6 +178,16 @@ shader debugging.
 vertex or pixel shaders, to see what an expensive shader draws and how much GPU
 time skipping it saves. It's a diagnostic: the skipped effect is missing.
 
+To find the shader behind an artifact, bisect live: run the game with
+`AUTOPORT_SKIP_SHADERS_FILE` and, standing where the artifact shows,
+`tools/shader-bisect.py` in a second terminal. It skips half of the shaders on
+screen at a time and asks whether the artifact is still there:
+
+```sh
+AUTOPORT_SKIP_SHADERS_FILE=$PWD/shader-skip.txt ./play-halo3.sh --name <gamertag>
+tools/shader-bisect.py shader-skip.txt
+```
+
 ## Legal
 
 No game code or data is included. `setup-halo3.sh` reads your own disc image;

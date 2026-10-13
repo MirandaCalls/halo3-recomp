@@ -40,3 +40,4 @@ autoport/resync/work-rtc/
 
 # Metal frame captures (play-halo3.sh --metal-capture)
 /metal-captures/
+/shader-skip.txt*
