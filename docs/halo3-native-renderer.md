@@ -56,12 +56,55 @@ and the recompiled code (`tools/guest-funcs.py`):
 | `8214FA18` | — | `LOAD_ALU_CONSTANT` via the ring | Shader constant load |
 | `825BEC98` | ~33 | Called from 77 places game-wide | Probably a general helper (to check) |
 
+## Bungie's rasterizer uses D3D inline (second trace)
+
+The second trace covered `82140000–821A0000`, ~1,373 frames of Sierra 117. The
+code of the busiest functions shows that most of that range is **Bungie's own
+rasterizer**, not the D3D library, and that it **manipulates the D3D device
+directly**, the way the XDK's inline header functions do:
+
+- The device pointer is a global at `828C4694` (`lis r10,-32116` +
+  `lwz r3,18068(r10)` throughout).
+- `82167BE0(sampler, a, b, c)` (46/frame) writes filter bits straight into the
+  device's fetch-constant shadow (bits 13–21 of a texture fetch constant) and
+  sets a dirty bit in the 64-bit mask at device+24: an inlined
+  `SetSamplerState` for samplers 0–25.
+- `8214E7F0(start, count, data)` (84/frame) computes a dirty mask for a range of
+  float constants and calls `8214D9D0` to copy them into the device: shader
+  float constants (`SetVertexShaderConstantF`-like).
+- `8214CEC0` (30/frame) does the same for another constant bank through
+  `8214CF40`.
+- `82170F30` computes viewport/projection values into the device's constant
+  shadow (device+2112…2156) with a dirty bit: Bungie's own constant setup.
+- `82170020` only resets Bungie's cached state globals; `82469E98` is a
+  per-object setup routine (calls `821713F0`, `825A5420`, `82170020`), not a
+  draw.
+
+### What this means for the design
+
+Hooking only the D3D library's real functions is not enough: much of the state
+reaches the device through inlined writes into its register shadow, from
+hundreds of places. The workable design is a **register-shadow renderer**:
+
+- Keep the guest D3D device object and its register shadow exactly as the game
+  writes them (inline or not).
+- Hook the few points where D3D turns the shadow into GPU work: the dirty-state
+  flush and draw packet writer, render target set / resolve, and present.
+- At each of those, read the shadow (Xenos register values, fetch constants,
+  shader constants) and issue the equivalent Metal work directly.
+
+Compared with full emulation this still interprets Xenos register meanings
+(reusing the SDK's register definitions, shader translator and texture
+formats), but skips the PM4 ring buffer, the command processor and, with
+resolves and render targets handled at the API level, the EDRAM emulation
+that costs the most on Apple GPUs.
+
 ## Open questions
 
-- **Where are the draws?** ~1,000 calls/frame cross into the first block, but
-  the menu issues ~1,500 draws/frame, and no traced function there emits draw
-  packets. The draw entry points and the state flush are expected in the second
-  block; the next trace covers it (`--range 82140000-821A0000`).
+- **Where are the draws?** Still not found. Draw packet headers carry the
+  index count, so they're built at run time and the static PM4 scan misses
+  them. Next: search the generated code for `DRAW_INDX` (`0x22`) and
+  `DRAW_INDX_2` (`0x36`) opcode constants with `tools/guest-grep.py`.
 - **Exact extent of the second block,** and whether Bungie's own rasterizer code
   is mixed into it.
 - Which render states the setters at +10564/+10568 control (from the register
