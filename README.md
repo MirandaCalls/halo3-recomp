@@ -159,6 +159,11 @@ What differs from the Linux path:
   writing depth (Halo 3's lighting pass: "greater or equal" against the albedo
   pass's depth, with a different vertex shader) toward passing, by that many
   depth units.
+- `AUTOPORT_PASS2_ALPHA_EPSILON=<e>` lowers the alpha test cutoff by `e` for
+  draws that depth-test against an earlier pass without writing depth. Halo 3
+  alpha-tests foliage at 0.502 in both its albedo and lighting passes with the
+  same texture and settings; on the host the two shaders can sample a leaf-edge
+  alpha on either side of the cutoff, leaving unlit (bright green) pixels.
 - `AUTOPORT_EQUAL_DEPTH=lequal|gequal` relaxes "equal" depth tests, and
   `AUTOPORT_EQUAL_DEPTH=noalphatest` drops the alpha test of draws with an equal,
   "less or equal" or "greater or equal" depth test and no depth write (diagnostics for pixels a multipass lighting

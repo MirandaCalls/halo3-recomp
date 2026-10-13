@@ -901,7 +901,7 @@ index 34a9a81..219e262 100644
    // Write coverage to gl_SampleMask and discard if zero (FBO mode only).
    if (!edram_fragment_shader_interlock_) {
 diff --git a/src/graphics/vulkan/command_processor.cpp b/src/graphics/vulkan/command_processor.cpp
-index 44aa9e2..13b0367 100644
+index 44aa9e2..8d00fac 100644
 --- a/src/graphics/vulkan/command_processor.cpp
 +++ b/src/graphics/vulkan/command_processor.cpp
 @@ -12,11 +12,20 @@
@@ -1691,7 +1691,43 @@ index 44aa9e2..13b0367 100644
    flags |= uint32_t(alpha_test_function) << SpirvShaderTranslator::kSysFlag_AlphaPassIfLess_Shift;
    // Gamma writing.
    // Gamma targets stored as UNORM16 hold linear values for blending, and
-@@ -6939,6 +7455,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6884,6 +7400,35 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+   }
+ 
+   // Alpha test.
++  // autoport: AUTOPORT_PASS2_ALPHA_EPSILON=<e> loosens the alpha test of draws
++  // that depth-test against an earlier pass without writing depth by e, so a
++  // pixel the first pass kept isn't discarded by the second over a tiny
++  // difference in the sampled alpha. Halo 3 alpha-tests its foliage at 0.502
++  // in both its albedo and lighting passes with the same texture and
++  // settings; on the host, the two separately compiled shaders can land on
++  // either side of the cutoff at leaf edges, which leaves unlit pixels.
++  static const float pass2_alpha_epsilon = [] {
++    const char* value = std::getenv("AUTOPORT_PASS2_ALPHA_EPSILON");
++    return value ? float(std::atof(value)) : 0.0f;
++  }();
++  if (pass2_alpha_epsilon != 0.0f && normalized_depth_control.z_enable &&
++      !normalized_depth_control.z_write_enable &&
++      (normalized_depth_control.zfunc == xenos::CompareFunction::kEqual ||
++       normalized_depth_control.zfunc == xenos::CompareFunction::kGreaterEqual ||
++       normalized_depth_control.zfunc == xenos::CompareFunction::kLessEqual)) {
++    switch (alpha_test_function) {
++      case xenos::CompareFunction::kGreater:
++      case xenos::CompareFunction::kGreaterEqual:
++        rb_alpha_ref -= pass2_alpha_epsilon;
++        break;
++      case xenos::CompareFunction::kLess:
++      case xenos::CompareFunction::kLessEqual:
++        rb_alpha_ref += pass2_alpha_epsilon;
++        break;
++      default:
++        break;
++    }
++  }
+   dirty |= system_constants_.alpha_test_reference != rb_alpha_ref;
+   system_constants_.alpha_test_reference = rb_alpha_ref;
+   uint32_t alpha_to_mask =
+@@ -6939,6 +7484,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
          UINT32_C(0x3F800000) + (color_exp_bias << 23);
      dirty |= system_constants_.color_exp_bias[i] != color_exp_bias_scale;
      system_constants_.color_exp_bias[i] = color_exp_bias_scale;
