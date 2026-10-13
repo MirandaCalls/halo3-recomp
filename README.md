@@ -132,6 +132,8 @@ What differs from the Linux path:
   the GPU use the guest's physical memory directly through
   `VK_EXT_external_memory_host`, so guest data needs no uploads and GPU writes
   land in guest memory. It falls back to the normal buffer if the import fails.
+  Resolve and memexport readbacks are skipped while it is on (the data is
+  already in guest memory), so `--readback_resolve` has no effect.
 - `play-halo3.sh` passes `--readback_resolve=fast` on macOS. Halo 3 sets its
   exposure from a resolved image it reads back on the CPU; without readback the
   campaign renders almost black (the menu looks normal).
