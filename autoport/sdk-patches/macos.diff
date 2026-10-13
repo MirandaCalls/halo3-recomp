@@ -729,6 +729,33 @@ index 1d7dd08..e48f31a 100644
        result = ReduceFloatPrecision(result, 21);
        result = builder_->createTriOp(spv::OpSelect, type_float_,
                                       builder_->createBinOp(spv::OpFOrdEqual, type_bool_, result,
+diff --git a/src/graphics/pipeline/shader/spirv_translator_fetch.cpp b/src/graphics/pipeline/shader/spirv_translator_fetch.cpp
+index 0476899..d06cb71 100644
+--- a/src/graphics/pipeline/shader/spirv_translator_fetch.cpp
++++ b/src/graphics/pipeline/shader/spirv_translator_fetch.cpp
+@@ -11,6 +11,7 @@
+ 
+ #include <climits>
+ #include <cmath>
++#include <cstdlib>
+ 
+ #include <SPIRV/GLSL.std.450.h>
+ #include <fmt/format.h>
+@@ -1865,6 +1866,14 @@ void SpirvShaderTranslator::ProcessTextureFetchInstruction(
+                   spv::OpVectorTimesScalar, type_float2_, gradients_h, lod_gradient_scale_h);
+               gradients_v = builder_->createNoContractionBinOp(
+                   spv::OpVectorTimesScalar, type_float2_, gradients_v, lod_gradient_scale_v);
++              // autoport: AUTOPORT_TEXTURE_LOD0=1 samples 2D textures with zero
++              // gradients (the most detailed mip the sampler allows), to test
++              // whether two passes pick different mips for the same texels.
++              static const bool texture_lod0 = std::getenv("AUTOPORT_TEXTURE_LOD0") != nullptr;
++              if (texture_lod0) {
++                gradients_h = const_float2_0_;
++                gradients_v = const_float2_0_;
++              }
+             } break;
+             case xenos::FetchOpDimension::k3DOrStacked: {
+               if (instr.attributes.use_register_gradients) {
 diff --git a/src/graphics/pipeline/shader/spirv_translator_rb.cpp b/src/graphics/pipeline/shader/spirv_translator_rb.cpp
 index 34a9a81..219e262 100644
 --- a/src/graphics/pipeline/shader/spirv_translator_rb.cpp
