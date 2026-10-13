@@ -145,6 +145,10 @@ What differs from the Linux path:
   with an "equal" depth test; without invariance, the two passes' positions
   for wind-animated foliage differed slightly on some pixels, which kept the
   first pass's unlit color (flickering green dots on ferns).
+- `AUTOPORT_EQUAL_DEPTH=lequal|gequal` relaxes "equal" depth tests, and
+  `AUTOPORT_EQUAL_DEPTH=noalphatest` drops the alpha test of draws with an equal
+  depth test and no depth write (diagnostics for pixels a multipass lighting
+  pass misses).
 - `AUTOPORT_PS_NAN=show` paints pixels whose pixel shader output is NaN or
   infinite magenta; `AUTOPORT_PS_NAN=zero` replaces those values with 0
   (diagnostics for single-pixel artifacts).
