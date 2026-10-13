@@ -4,6 +4,7 @@
   AUTOPORT_DRAW_LOG=$PWD/draws.log ./play-halo3.sh --name <gamertag>
   touch draws.log.trigger            # while looking at the artifact
   tools/draw-log-pairs.py draws.log  # > pairs.txt
+  tools/draw-log-pairs.py draws.log --shader 6E32A3F3 --max 3   # groups using one shader
 
 Draws of the same mesh share their index buffer, index count and first vertex
 buffer; when a frame draws a mesh more than once with different shaders, those
@@ -33,8 +34,35 @@ def as_float(value):
     return struct.unpack("<f", struct.pack("<I", value))[0]
 
 
+FILTER = ["point", "linear", "basemap", "useconst"]
+ANISO = ["off", "1x", "2x", "4x", "8x", "16x", "max", "useconst"]
+
+
+def signed(value, count):
+    return value - (1 << count) if value & (1 << (count - 1)) else value
+
+
+def decode_texture(dw):
+    d0, d1, d2, d3, d4, d5 = dw
+    if bits(d0, 0, 2) != 2:
+        return "(not a texture)"
+    return (f"addr={bits(d1, 12, 20) << 12:08X} fmt={bits(d1, 0, 6)} "
+            f"size={bits(d2, 0, 13) + 1}x{bits(d2, 13, 13) + 1} "
+            f"signs={bits(d0, 2, 8):02X} swz={bits(d3, 1, 12):03X} exp={signed(bits(d3, 13, 6), 6)} "
+            f"mag={FILTER[bits(d3, 19, 2)]} min={FILTER[bits(d3, 21, 2)]} "
+            f"mip={FILTER[bits(d3, 23, 2)]} aniso={ANISO[bits(d3, 25, 3)]} "
+            f"mips={bits(d4, 0, 4)}-{bits(d4, 4, 4)} lodbias={signed(bits(d4, 10, 10), 10) / 32:g} "
+            f"grad={signed(bits(d4, 20, 5), 5)},{signed(bits(d4, 25, 5), 5)} "
+            f"clamp={bits(d0, 10, 3)}{bits(d0, 13, 3)} mipaddr={bits(d5, 12, 20) << 12:08X}")
+
+
 def decode(r):
     d = {}
+    for key, value in r.items():
+        if key.startswith("tf"):
+            d[key] = decode_texture(value)
+        elif key.startswith("psc"):
+            d[key] = " ".join(f"{as_float(v):g}" for v in value)
     dc = r["depthcontrol"]
     d["depth"] = (f"{CMP[bits(dc, 4, 3)]}{' write' if bits(dc, 2, 1) else ''}"
                   if bits(dc, 1, 1) else "off")
@@ -80,6 +108,10 @@ def main():
     ap.add_argument("log")
     ap.add_argument("--all", action="store_true",
                     help="also print groups whose passes all use the same pixel shader")
+    ap.add_argument("--shader", action="append", default=[],
+                    help="only groups with a draw using this vertex or pixel shader (hash prefix); "
+                         "repeatable")
+    ap.add_argument("--max", type=int, default=0, help="print at most this many groups")
     args = ap.parse_args()
     draws = []
     for line in open(args.log):
@@ -87,7 +119,9 @@ def main():
             continue
         parts = line.split()
         frame, index, vs, ps, prim, count = parts[:6]
-        regs = {k: int(v, 16) for k, v in (p.split("=") for p in parts[6:])}
+        regs = {}
+        for k, v in (p.split("=") for p in parts[6:]):
+            regs[k] = [int(x, 16) for x in v.split(":")] if ":" in v else int(v, 16)
         draws.append(dict(frame=int(frame), index=int(index), vs=vs, ps=ps, prim=int(prim),
                           count=int(count), regs=regs))
     groups = collections.defaultdict(list)
@@ -101,6 +135,11 @@ def main():
             continue
         if not args.all and len({m["ps"] for m in members}) < 2:
             continue
+        if args.shader and not any(m[k].startswith(h.upper()) for m in members
+                                   for k in ("vs", "ps") for h in args.shader):
+            continue
+        if args.max and shown >= args.max:
+            break
         decoded = [decode(m["regs"]) for m in members]
         fields = list(decoded[0].keys())
         differing = {f for f in fields if len({dd[f] for dd in decoded}) > 1}
