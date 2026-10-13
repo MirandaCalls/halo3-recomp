@@ -168,6 +168,11 @@ What differs from the Linux path:
   alpha drops below the cutoff and the unlit albedo stays: flickering green dots
   on ferns. The lower cutoff hides most of them; the root cause (how the
   lighting pass's texture coordinate derivatives come out) is still open.
+- `AUTOPORT_TEXTURE_STATS=1` logs, every 300 frames, texture loads per frame
+  (first loads and reloads), how many texture invalidations came from CPU and
+  GPU writes, and the most reloaded textures.
+- `AUTOPORT_INVALIDATION_WIDEN=0` invalidates only the guest pages the CPU
+  wrote, instead of up to 64 pages around them (1 MB with macOS's 16 KB pages).
 - `AUTOPORT_TEXTURE_LOD0=1` samples 2D textures with zero gradients, i.e. the
   most detailed mip (diagnostic; distant textures shimmer).
 - `AUTOPORT_TEXTURE_GAMMA=off` treats gamma texture components as plain
