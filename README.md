@@ -128,6 +128,10 @@ What differs from the Linux path:
   (see below).
 - The runtime fix-up loop (`autoport/runtime_loop.py`) opens a real window on
   macOS rather than SDL's offscreen driver.
+- `--vulkan_shared_memory_host_import=true` (experimental, off by default) makes
+  the GPU use the guest's physical memory directly through
+  `VK_EXT_external_memory_host`, so guest data needs no uploads and GPU writes
+  land in guest memory. It falls back to the normal buffer if the import fails.
 - `play-halo3.sh` passes `--readback_resolve=fast` on macOS. Halo 3 sets its
   exposure from a resolved image it reads back on the CPU; without readback the
   campaign renders almost black (the menu looks normal).
