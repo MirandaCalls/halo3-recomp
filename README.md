@@ -272,6 +272,13 @@ What differs from the Linux path:
   the player (or a Phantom firing) overflows Halo 3's bloom, and the NaN that
   follows flashes the whole frame purple, blue or rainbow. On by default on
   macOS; `AUTOPORT_FLOAT_RT_CLAMP=0` turns it off, `=1` turns it on elsewhere.
+- `AUTOPORT_FAST_MATH` drops the "precise" (NoContraction) marking from
+  translated shaders. MoltenVK's SPIRV-Cross turns each precise add or multiply
+  into a call to an `[[clang::optnone]]` helper function in the Metal source,
+  hundreds per pixel shader (190 in Halo 3's motion blur, 633 in its main
+  surface shader). Only vertex positions need the precision (multipass depth
+  equality), so `ps` (the macOS default) applies it to pixel shaders; `0` keeps
+  every shader precise, `all` also covers vertex and compute shaders.
 - `AUTOPORT_TEXTURE_SANITIZE=1` replaces infinite texture fetch results with
   ±65504 and NaN with 0. Xenos 16-bit floats have no infinity or NaN (exponent
   31 holds 65536 to 131008), but 16-bit float textures are copied to the host
