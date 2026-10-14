@@ -916,7 +916,7 @@ index e405512..ab66f17 100644
      .lifecycle(rex::cvar::Lifecycle::kHotReload);
  REXCVAR_DEFINE_STRING(dump_shaders, "", "GPU", "Path to dump shaders to");
 diff --git a/src/graphics/pipeline/shader/spirv_translator.cpp b/src/graphics/pipeline/shader/spirv_translator.cpp
-index 3cffc7d..06d3fbe 100644
+index 3cffc7d..da5ae1a 100644
 --- a/src/graphics/pipeline/shader/spirv_translator.cpp
 +++ b/src/graphics/pipeline/shader/spirv_translator.cpp
 @@ -12,6 +12,8 @@
@@ -936,7 +936,7 @@ index 3cffc7d..06d3fbe 100644
  #include <rex/string/buffer.h>
  
  REXCVAR_DEFINE_BOOL(spirv_disable_rounding_mode_rte, false, "GPU",
-@@ -33,6 +36,62 @@ REXCVAR_DEFINE_BOOL(spirv_disable_rounding_mode_rte, false, "GPU",
+@@ -33,6 +36,66 @@ REXCVAR_DEFINE_BOOL(spirv_disable_rounding_mode_rte, false, "GPU",
  
  namespace rex::graphics {
  
@@ -947,18 +947,22 @@ index 3cffc7d..06d3fbe 100644
 +// in the Metal source, so a pixel shader pays a non-inlined function call for
 +// nearly every add and multiply. Precision invariance only matters for vertex
 +// positions (multipass depth equality), so on macOS the decorations are dropped
-+// from pixel shaders. AUTOPORT_FAST_MATH: 0 = keep everything precise,
-+// ps = pixel shaders only (the macOS default), all = vertex and compute too.
++// from pixel shaders and from vertex shaders run as compute for memexport.
++// AUTOPORT_FAST_MATH: 0 = keep everything precise, ps = pixel shaders only,
++// compute = pixel and compute shaders (the macOS default), all = vertex too.
 +int PreciseMathStripMode() {
 +  static const int mode = [] {
 +    const char* value = std::getenv("AUTOPORT_FAST_MATH");
 +    if (!value) {
-+      return REX_PLATFORM_MAC ? 1 : 0;
++      return REX_PLATFORM_MAC ? 2 : 0;
 +    }
 +    if (!std::strcmp(value, "all")) {
++      return 3;
++    }
++    if (!std::strcmp(value, "compute") || !std::strcmp(value, "1")) {
 +      return 2;
 +    }
-+    if (!std::strcmp(value, "ps") || !std::strcmp(value, "1")) {
++    if (!std::strcmp(value, "ps")) {
 +      return 1;
 +    }
 +    return 0;
@@ -999,7 +1003,7 @@ index 3cffc7d..06d3fbe 100644
  SpirvShaderTranslator::Features::Features(bool all)
      : spirv_version(all ? spv::Spv_1_5 : spv::Spv_1_0),
        max_storage_buffer_range(all ? UINT32_MAX : (128 * 1024 * 1024)),
-@@ -1212,7 +1271,8 @@ std::vector<uint8_t> SpirvShaderTranslator::CompleteTranslation() {
+@@ -1212,7 +1275,8 @@ std::vector<uint8_t> SpirvShaderTranslator::CompleteTranslation() {
                            : (is_tess_eval_shader ? spv::ExecutionModelTessellationEvaluation
                                                   : spv::ExecutionModelVertex);
      if (is_compute_shader) {
@@ -1009,17 +1013,19 @@ index 3cffc7d..06d3fbe 100644
      } else if (is_tess_eval_shader) {
        Modification shader_modification = GetSpirvShaderModification();
        switch (shader_modification.vertex.host_vertex_shader_type) {
-@@ -1276,6 +1336,9 @@ std::vector<uint8_t> SpirvShaderTranslator::CompleteTranslation() {
+@@ -1276,6 +1340,11 @@ std::vector<uint8_t> SpirvShaderTranslator::CompleteTranslation() {
    // TODO(Triang3l): Avoid copy?
    std::vector<unsigned int> module_uints;
    builder_->dump(module_uints);
-+  if (is_pixel_shader() ? PreciseMathStripMode() >= 1 : PreciseMathStripMode() >= 2) {
++  int precise_math_strip_mode = PreciseMathStripMode();
++  if (is_pixel_shader() ? precise_math_strip_mode >= 1
++                        : precise_math_strip_mode >= (IsSpirvComputeShader() ? 2 : 3)) {
 +    StripNoContractionDecorations(module_uints);
 +  }
    std::vector<uint8_t> module_bytes;
    module_bytes.reserve(sizeof(unsigned int) * module_uints.size());
    module_bytes.insert(module_bytes.cend(), reinterpret_cast<const uint8_t*>(module_uints.data()),
-@@ -1776,6 +1839,14 @@ void SpirvShaderTranslator::StartVertexOrTessEvalShaderBeforeMain() {
+@@ -1776,6 +1845,14 @@ void SpirvShaderTranslator::StartVertexOrTessEvalShaderBeforeMain() {
    builder_->addMemberName(type_struct_per_vertex, kOutputPerVertexMemberPosition, "gl_Position");
    builder_->addMemberDecoration(type_struct_per_vertex, kOutputPerVertexMemberPosition,
                                  spv::DecorationBuiltIn, spv::BuiltInPosition);
@@ -1034,7 +1040,7 @@ index 3cffc7d..06d3fbe 100644
    if (output_per_vertex_member_clip_distance_ != UINT32_MAX) {
      builder_->addMemberName(type_struct_per_vertex, output_per_vertex_member_clip_distance_,
                              "gl_ClipDistance");
-@@ -3720,6 +3791,10 @@ void SpirvShaderTranslator::StoreResult(const InstructionResult& result, spv::Id
+@@ -3720,6 +3797,10 @@ void SpirvShaderTranslator::StoreResult(const InstructionResult& result, spv::Id
      } break;
      case InstructionStorageTarget::kPosition: {
        assert_true(is_vertex_shader());
