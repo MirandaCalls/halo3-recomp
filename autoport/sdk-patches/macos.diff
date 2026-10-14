@@ -2248,10 +2248,18 @@ index 9ba4cd2..ad757c0 100644
          MarkEdramBufferModified();
        }
 diff --git a/src/graphics/vulkan/shared_memory.cpp b/src/graphics/vulkan/shared_memory.cpp
-index 1ff4cab..68bce4e 100644
+index 1ff4cab..a5177e3 100644
 --- a/src/graphics/vulkan/shared_memory.cpp
 +++ b/src/graphics/vulkan/shared_memory.cpp
-@@ -20,12 +20,21 @@
+@@ -10,6 +10,7 @@
+  */
+ 
+ #include <algorithm>
++#include <cstdlib>
+ #include <cstring>
+ #include <utility>
+ #include <vector>
+@@ -20,12 +21,21 @@
  #include <rex/graphics/vulkan/deferred_command_buffer.h>
  #include <rex/graphics/vulkan/shared_memory.h>
  #include <rex/logging.h>
@@ -2273,7 +2281,7 @@ index 1ff4cab..68bce4e 100644
  REXCVAR_DEFINE_BOOL(gpu_allow_invalid_upload_range, false, "GPU",
                      "Allows games to read data from pages that are marked as no access.");
  
-@@ -54,6 +63,10 @@ bool VulkanSharedMemory::Initialize() {
+@@ -54,6 +64,10 @@ bool VulkanSharedMemory::Initialize() {
    const VkBufferCreateFlags sparse_flags =
        VK_BUFFER_CREATE_SPARSE_BINDING_BIT | VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT;
  
@@ -2284,7 +2292,7 @@ index 1ff4cab..68bce4e 100644
    // Try to create a sparse buffer.
    VkBufferCreateInfo buffer_create_info;
    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-@@ -65,7 +78,7 @@ bool VulkanSharedMemory::Initialize() {
+@@ -65,7 +79,7 @@ bool VulkanSharedMemory::Initialize() {
    buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
    buffer_create_info.queueFamilyIndexCount = 0;
    buffer_create_info.pQueueFamilyIndices = nullptr;
@@ -2293,7 +2301,7 @@ index 1ff4cab..68bce4e 100644
        vulkan_device->properties().sparseResidencyBuffer) {
      if (dfn.vkCreateBuffer(device, &buffer_create_info, nullptr, &buffer_) == VK_SUCCESS) {
        VkMemoryRequirements buffer_memory_requirements;
-@@ -207,10 +220,97 @@ void VulkanSharedMemory::EndSubmission() {
+@@ -207,10 +221,107 @@ void VulkanSharedMemory::EndSubmission() {
    upload_buffer_pool_->FlushWrites();
  }
  
@@ -2357,6 +2365,16 @@ index 1ff4cab..68bce4e 100644
 +    conflict = draw_writes_since_barrier_.Overlaps(written_range.first, written_end) ||
 +               draw_reads_since_barrier_.Overlaps(written_range.first, written_end);
 +  }
++  // autoport: AUTOPORT_MEMEXPORT_BARRIERS=never drops these barriers to
++  // measure what the render passes they split cost (unsafe: draws may read
++  // stale memexported data).
++  static const bool barriers_never = [] {
++    const char* value = std::getenv("AUTOPORT_MEMEXPORT_BARRIERS");
++    return value && !std::strcmp(value, "never");
++  }();
++  if (conflict && barriers_never) {
++    conflict = false;
++  }
 +  if (conflict) {
 +    VkPipelineStageFlags stage_mask;
 +    VkAccessFlags access_mask;
@@ -2391,7 +2409,7 @@ index 1ff4cab..68bce4e 100644
    if (last_usage_ != usage || last_written_range_.second) {
      VkPipelineStageFlags src_stage_mask, dst_stage_mask;
      VkAccessFlags src_access_mask, dst_access_mask;
-@@ -237,6 +337,81 @@ void VulkanSharedMemory::Use(Usage usage, std::pair<uint32_t, uint32_t> written_
+@@ -237,6 +348,81 @@ void VulkanSharedMemory::Use(Usage usage, std::pair<uint32_t, uint32_t> written_
    last_written_range_ = written_range;
  }
  
@@ -2473,7 +2491,7 @@ index 1ff4cab..68bce4e 100644
  bool VulkanSharedMemory::AllocateSparseHostGpuMemoryRange(uint32_t offset_allocations,
                                                            uint32_t length_allocations) {
    if (!length_allocations) {
-@@ -283,6 +458,18 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
+@@ -283,6 +469,18 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
    if (!num_upload_ranges) {
      return true;
    }
@@ -2492,7 +2510,7 @@ index 1ff4cab..68bce4e 100644
  
    auto& range_front = upload_page_ranges[0];
    auto& range_back = upload_page_ranges[num_upload_ranges - 1];
-@@ -338,6 +525,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
+@@ -338,6 +536,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
                    upload_buffer_size);
        if (upload_buffer_previous != upload_buffer && !upload_regions_.empty()) {
          assert_true(upload_buffer_previous != VK_NULL_HANDLE);
@@ -2500,7 +2518,7 @@ index 1ff4cab..68bce4e 100644
          command_buffer.CmdVkCopyBuffer(upload_buffer_previous, buffer_,
                                         uint32_t(upload_regions_.size()), upload_regions_.data());
          upload_regions_.clear();
-@@ -357,6 +545,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
+@@ -357,6 +556,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
    }
    if (!upload_regions_.empty()) {
      assert_true(upload_buffer_previous != VK_NULL_HANDLE);

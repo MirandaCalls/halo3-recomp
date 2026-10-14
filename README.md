@@ -173,7 +173,10 @@ What differs from the Linux path:
   overwrites memory an earlier one wrote or read since the last barrier. The
   SDK inserted one after every memexport draw, which ended a render pass each
   time (~110 per frame in Halo 3). `AUTOPORT_MEMEXPORT_BARRIERS=always` restores
-  that.
+  that. `AUTOPORT_MEMEXPORT_BARRIERS=never` drops the remaining ones, which
+  each split a render pass, to measure what they cost; draws may then read
+  stale memexported data (particles), so it's a measurement, not a fix. Apple
+  GPUs have no barriers inside a render pass (MoltenVK ignores them there).
 - `AUTOPORT_TEXTURE_STATS=1` logs, every 300 frames, texture loads per frame
   (first loads and reloads), how many texture invalidations came from CPU and
   GPU writes, and the most reloaded textures.
