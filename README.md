@@ -291,6 +291,13 @@ What differs from the Linux path:
   GPU, the GPU idles while the rest of the frame is recorded. On macOS a
   resolve also ends the submission when the GPU has finished everything
   submitted and at least N draws (default 16) are waiting; `0` turns it off.
+- `AUTOPORT_VBLANK_ON_DEMAND_MS`: Halo 3 presents on every second 60 Hz
+  vblank, so a frame that misses 33.3 ms waits for the next vblank (50 ms,
+  then 66.7 ms) with the GPU idle. On macOS, once 33 ms have passed since the
+  last swap and the game's command stream is waiting (not on the host GPU),
+  the next vblank is delivered right away instead of at its slot. The vblank
+  rate over time stays 60 Hz and frames on time are unaffected. `0` turns it
+  off; another value changes the threshold in ms.
 - `AUTOPORT_TEXTURE_SANITIZE=1` replaces infinite texture fetch results with
   ±65504 and NaN with 0. Xenos 16-bit floats have no infinity or NaN (exponent
   31 holds 65536 to 131008), but 16-bit float textures are copied to the host

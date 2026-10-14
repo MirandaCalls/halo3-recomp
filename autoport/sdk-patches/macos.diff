@@ -1,5 +1,5 @@
 diff --git a/include/rex/graphics/command_processor.h b/include/rex/graphics/command_processor.h
-index cda5d76..14aa774 100644
+index cda5d76..c9cc58d 100644
 --- a/include/rex/graphics/command_processor.h
 +++ b/include/rex/graphics/command_processor.h
 @@ -12,6 +12,7 @@
@@ -10,7 +10,19 @@ index cda5d76..14aa774 100644
  #include <cstring>
  #include <deque>
  #include <functional>
-@@ -211,6 +212,45 @@ class CommandProcessor {
+@@ -120,6 +121,11 @@ class CommandProcessor {
+   uint32_t counter() const { return counter_; }
+   void increment_counter() { counter_++; }
+ 
++  // autoport: set while the guest's command stream waits (WAIT_REG_MEM, not on
++  // the host GPU) with its frame already late, so the vblank timer delivers
++  // the next vblank now (see GraphicsSystem's vsync worker).
++  bool TakeVblankRequest() { return vblank_requested_.exchange(false, std::memory_order_relaxed); }
++
+   Shader* active_vertex_shader() const { return active_vertex_shader_; }
+   Shader* active_pixel_shader() const { return active_pixel_shader_; }
+ 
+@@ -211,6 +217,47 @@ class CommandProcessor {
    virtual uint64_t GetCompletedSubmission() const { return 0; }
  
    virtual void OnPrimaryBufferEnd() {}
@@ -43,6 +55,8 @@ index cda5d76..14aa774 100644
 +  // last TakeWaitTimes, for AUTOPORT_GPU_TIMING_LOG: with the ring buffer
 +  // empty (the guest hasn't submitted more), and in WAIT_REG_MEM (the guest's
 +  // command stream waits on a register or memory value).
++  std::atomic<bool> vblank_requested_{false};
++  double last_swap_ms_ = 0.0;
 +  double ring_idle_ms_ = 0.0;
 +  double wait_reg_mem_ms_ = 0.0;
 +  // The part of wait_reg_mem_ms_ spent awaiting the host GPU for a held
@@ -821,7 +835,7 @@ index 8ed0315..e2d36ca 100644
      # Texture cache test: loads a capture's textures and dumps decoded PPMs.
      add_executable(xgpu-texture-test ${XGPU_TOOLS_DIR}/texture_test.cpp
 diff --git a/src/graphics/command_processor.cpp b/src/graphics/command_processor.cpp
-index 479739a..ea60a52 100644
+index 479739a..99644e7 100644
 --- a/src/graphics/command_processor.cpp
 +++ b/src/graphics/command_processor.cpp
 @@ -11,7 +11,12 @@
@@ -952,7 +966,15 @@ index 479739a..ea60a52 100644
      }
    }
    return true;
-@@ -1253,7 +1322,19 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(memory::RingBuffer* reade
+@@ -1223,6 +1292,7 @@ bool CommandProcessor::ExecutePacketType3_XE_SWAP(memory::RingBuffer* reader, ui
+   reader->AdvanceRead((count - 4) * sizeof(uint32_t));
+ 
+   IssueSwap(frontbuffer_ptr, frontbuffer_width, frontbuffer_height);
++  last_swap_ms_ = WaitClockMs();
+ 
+   ++counter_;
+   return true;
+@@ -1253,7 +1323,31 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(memory::RingBuffer* reade
  
    bool is_memory = (wait_info & 0x10) != 0;
  
@@ -966,13 +988,25 @@ index 479739a..ea60a52 100644
 +    const char* value = std::getenv("AUTOPORT_WAIT_REG_MEM");
 +    return value ? std::strcmp(value, "guest") != 0 : bool(REX_PLATFORM_MAC);
 +  }();
++  // autoport: Halo 3 presents on every second 60 Hz vblank, so a frame that
++  // misses 33.3 ms waits for the next vblank: 50 ms, 66.7 ms, with the GPU
++  // idle meanwhile. On macOS, once this many ms have passed since the last
++  // swap (default 33) and the command stream is waiting on something other
++  // than the host GPU, the vblank timer delivers its next vblank right away
++  // instead of at its slot. The vblank rate over time is unchanged, and frames
++  // on time still wait for their vblank. AUTOPORT_VBLANK_ON_DEMAND_MS=0 turns
++  // it off.
++  static const double vblank_on_demand_ms = [] {
++    const char* value = std::getenv("AUTOPORT_VBLANK_ON_DEMAND_MS");
++    return value ? std::strtod(value, nullptr) : (REX_PLATFORM_MAC ? 33.0 : 0.0);
++  }();
 +
    bool matched = false;
 +  const double wait_start_ms = WaitClockMs();
    do {
      uint32_t value = 0;
      if (is_memory) {
-@@ -1294,12 +1375,30 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(memory::RingBuffer* reade
+@@ -1294,12 +1388,34 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(memory::RingBuffer* reade
          break;
      }
      if (!matched) {
@@ -992,6 +1026,10 @@ index 479739a..ea60a52 100644
 +          continue;
 +        }
 +      }
++      if (vblank_on_demand_ms > 0.0 && last_swap_ms_ > 0.0 &&
++          WaitClockMs() - last_swap_ms_ >= vblank_on_demand_ms) {
++        vblank_requested_.store(true, std::memory_order_relaxed);
++      }
        // Wait.
        if (wait >= 0x100) {
          PrepareForWait();
@@ -1003,15 +1041,17 @@ index 479739a..ea60a52 100644
          } else {
            rex::thread::Sleep(std::chrono::milliseconds(wait / 0x100));
          }
-@@ -1315,6 +1414,7 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(memory::RingBuffer* reade
+@@ -1315,6 +1431,9 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(memory::RingBuffer* reade
        }
      }
    } while (!matched);
 +  wait_reg_mem_ms_ += WaitClockMs() - wait_start_ms;
++  // Don't let a request outlive the wait it was for.
++  vblank_requested_.store(false, std::memory_order_relaxed);
  
    return true;
  }
-@@ -1358,7 +1458,7 @@ bool CommandProcessor::ExecutePacketType3_REG_TO_MEM(memory::RingBuffer* reader,
+@@ -1358,7 +1477,7 @@ bool CommandProcessor::ExecutePacketType3_REG_TO_MEM(memory::RingBuffer* reader,
    auto endianness = static_cast<xenos::Endian>(mem_addr & 0x3);
    mem_addr &= ~0x3;
    reg_val = GpuSwap(reg_val, endianness);
@@ -1020,7 +1060,7 @@ index 479739a..ea60a52 100644
  
    return true;
  }
-@@ -1372,7 +1472,7 @@ bool CommandProcessor::ExecutePacketType3_MEM_WRITE(memory::RingBuffer* reader,
+@@ -1372,7 +1491,7 @@ bool CommandProcessor::ExecutePacketType3_MEM_WRITE(memory::RingBuffer* reader,
      auto endianness = static_cast<xenos::Endian>(write_addr & 0x3);
      auto addr = write_addr & ~0x3;
      write_data = GpuSwap(write_data, endianness);
@@ -1029,7 +1069,7 @@ index 479739a..ea60a52 100644
      write_addr += 4;
    }
  
-@@ -1433,7 +1533,7 @@ bool CommandProcessor::ExecutePacketType3_COND_WRITE(memory::RingBuffer* reader,
+@@ -1433,7 +1552,7 @@ bool CommandProcessor::ExecutePacketType3_COND_WRITE(memory::RingBuffer* reader,
        auto endianness = static_cast<xenos::Endian>(write_reg_addr & 0x3);
        write_reg_addr &= ~0x3;
        write_data = GpuSwap(write_data, endianness);
@@ -1038,7 +1078,7 @@ index 479739a..ea60a52 100644
      } else {
        // Register.
        WriteRegister(write_reg_addr, write_data);
-@@ -1478,7 +1578,7 @@ bool CommandProcessor::ExecutePacketType3_EVENT_WRITE_SHD(memory::RingBuffer* re
+@@ -1478,7 +1597,7 @@ bool CommandProcessor::ExecutePacketType3_EVENT_WRITE_SHD(memory::RingBuffer* re
    auto endianness = static_cast<xenos::Endian>(address & 0x3);
    address &= ~0x3;
    data_value = GpuSwap(data_value, endianness);
@@ -1062,6 +1102,33 @@ index e405512..ab66f17 100644
                      "Use R16G16B16A16_UNORM for gamma render targets (more accurate than sRGB)")
      .lifecycle(rex::cvar::Lifecycle::kHotReload);
  REXCVAR_DEFINE_STRING(dump_shaders, "", "GPU", "Path to dump shaders to");
+diff --git a/src/graphics/graphics_system.cpp b/src/graphics/graphics_system.cpp
+index 8f2fcb0..d592781 100644
+--- a/src/graphics/graphics_system.cpp
++++ b/src/graphics/graphics_system.cpp
+@@ -158,11 +158,21 @@ X_STATUS GraphicsSystem::SetupGuestGpu(runtime::FunctionDispatcher* function_dis
+             std::max(uint64_t(1), uint64_t(double(guest_tick_frequency) / refresh_rate_hz));
+         uint64_t no_vsync_interval_ticks = std::max(uint64_t(1), guest_tick_frequency / 1000);
+         uint64_t last_frame_time = chrono::Clock::QueryGuestTickCount();
++        // autoport: the next vblank can be delivered early on request (see
++        // AUTOPORT_VBLANK_ON_DEMAND_MS); it then doesn't fire again at its
++        // slot, which last_frame_time being ahead of the clock skips.
++        uint64_t min_early_ticks = vsync_interval_ticks / 4;
+         while (vsync_worker_running_) {
+           uint64_t current_time = chrono::Clock::QueryGuestTickCount();
+           uint64_t interval_ticks =
+               REXCVAR_GET(vsync) ? vsync_interval_ticks : no_vsync_interval_ticks;
+-          while (current_time - last_frame_time >= interval_ticks) {
++          while (int64_t(current_time - last_frame_time) >= int64_t(interval_ticks)) {
++            MarkVblank();
++            last_frame_time += interval_ticks;
++          }
++          if (command_processor_ && command_processor_->TakeVblankRequest() &&
++              int64_t(current_time - last_frame_time) >= int64_t(min_early_ticks)) {
++            // Deliver the next slot's vblank now, at most once per slot.
+             MarkVblank();
+             last_frame_time += interval_ticks;
+           }
 diff --git a/src/graphics/pipeline/shader/spirv_translator.cpp b/src/graphics/pipeline/shader/spirv_translator.cpp
 index 3cffc7d..da5ae1a 100644
 --- a/src/graphics/pipeline/shader/spirv_translator.cpp
