@@ -210,12 +210,16 @@ What differs from the Linux path:
 - `AUTOPORT_PS_NAN=show` paints pixels whose pixel shader output is NaN or
   infinite magenta; `AUTOPORT_PS_NAN=zero` replaces those values with 0
   (diagnostics for single-pixel artifacts).
-- `AUTOPORT_FLOAT_RT_CLAMP` clamps colors written to `k_2_10_10_10_FLOAT`
-  render targets to the guest format's range (0 to 31.875, alpha 0 to 1), as
-  Xenos does. The host render target path stores them as 16-bit float, which
-  also keeps negative and larger values: bright plasma lighting (a Phantom
-  firing) then blooms the scene purple and blue. On by default on macOS;
-  `AUTOPORT_FLOAT_RT_CLAMP=0` turns it off, `=1` turns it on elsewhere.
+- `AUTOPORT_FLOAT_RT_CLAMP` clamps colors written to float render targets on
+  the host render target path, and turns NaN into 0 (Xenos render targets have
+  no NaN). `k_2_10_10_10_FLOAT` targets are clamped to the guest format's range
+  (0 to 31.875, alpha 0 to 1); the host stores them as 16-bit float, which keeps
+  negative and larger values. `k_16_16_FLOAT` and `k_16_16_16_16_FLOAT` targets
+  are clamped to ±65504: Xenos 16-bit floats reach 131008 with no infinity,
+  but host ones overflow to infinity above 65504. Without this, plasma hitting
+  the player (or a Phantom firing) overflows Halo 3's bloom, and the NaN that
+  follows flashes the whole frame purple, blue or rainbow. On by default on
+  macOS; `AUTOPORT_FLOAT_RT_CLAMP=0` turns it off, `=1` turns it on elsewhere.
 - `AUTOPORT_FLUSH_DENORMALS=1` treats denormal floats as zero where Xenos does:
   in the "0 × anything = 0" rule of multiplications and dot products, and in
   the inputs of `rcp`, `rsq` and `log`. Halo 3's tone mapping pass

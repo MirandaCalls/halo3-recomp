@@ -792,7 +792,7 @@ index 0476899..d06cb71 100644
              case xenos::FetchOpDimension::k3DOrStacked: {
                if (instr.attributes.use_register_gradients) {
 diff --git a/src/graphics/pipeline/shader/spirv_translator_rb.cpp b/src/graphics/pipeline/shader/spirv_translator_rb.cpp
-index 34a9a81..7ecd927 100644
+index 34a9a81..0c9fdfd 100644
 --- a/src/graphics/pipeline/shader/spirv_translator_rb.cpp
 +++ b/src/graphics/pipeline/shader/spirv_translator_rb.cpp
 @@ -10,9 +10,12 @@
@@ -909,15 +909,21 @@ index 34a9a81..7ecd927 100644
    if (current_shader().kills_pixels()) {
      if (edram_fragment_shader_interlock_) {
        fsi_pixel_potentially_killed = true;
-@@ -1183,6 +1273,38 @@ void SpirvShaderTranslator::CompleteFragmentShaderInMain() {
+@@ -1183,6 +1273,44 @@ void SpirvShaderTranslator::CompleteFragmentShaderInMain() {
            builder_->getBuildPoint()->addInstruction(std::move(color_rgba_shuffle_op));
          }
  
 +        // autoport: clamp to the guest render target's range (edram_rt_clamp,
 +        // filled for the host render target path when AUTOPORT_FLOAT_RT_CLAMP
 +        // is set), which a host format with a wider range, like
-+        // R16G16B16A16_SFLOAT for 7e3, doesn't do.
++        // R16G16B16A16_SFLOAT for 7e3, doesn't do. NaN becomes 0 first: Xenos
++        // render targets have no NaN, and a host one would spread through
++        // blending and post-processing.
 +        if (FloatRenderTargetClampEnabled()) {
++          color = builder_->createTriOp(
++              spv::OpSelect, type_float4_,
++              builder_->createUnaryOp(spv::OpIsNan, type_bool4_, color), const_float4_0_,
++              color);
 +          id_vector_temp_.clear();
 +          id_vector_temp_.push_back(builder_->makeIntConstant(kSystemConstantEdramRTClamp));
 +          id_vector_temp_.push_back(builder_->makeIntConstant(int32_t(color_target_index)));
@@ -942,13 +948,13 @@ index 34a9a81..7ecd927 100644
 +              builder_->createRvalueSwizzle(spv::NoPrecision, type_float4_, rt_clamp,
 +                                            uint_vector_temp_);
 +          color = builder_->createTriBuiltinCall(type_float4_, ext_inst_glsl_std_450_,
-+                                                 GLSLstd450NClamp, color, clamp_min, clamp_max);
++                                                 GLSLstd450FClamp, color, clamp_min, clamp_max);
 +        }
 +
          builder_->createStore(color, color_variable);
        }
      }
-@@ -4069,6 +4191,11 @@ void SpirvShaderTranslator::FSI_AlphaToMask() {
+@@ -4069,6 +4197,11 @@ void SpirvShaderTranslator::FSI_AlphaToMask() {
    // Convert offset to float (0.0, 1.0, 2.0, 3.0)
    spv::Id threshold_offset =
        builder_->createUnaryOp(spv::OpConvertUToF, type_float_, threshold_offset_uint);
@@ -960,7 +966,7 @@ index 34a9a81..7ecd927 100644
  
    // Load alpha from RT0.w (oC0.w) once for all samples (optimization)
    id_vector_temp_.clear();
-@@ -4171,6 +4298,10 @@ void SpirvShaderTranslator::FSI_AlphaToMask() {
+@@ -4171,6 +4304,10 @@ void SpirvShaderTranslator::FSI_AlphaToMask() {
    id_vector_temp_.push_back(coverage_1x);
    id_vector_temp_.push_back(block_msaa_disabled.getId());
    spv::Id coverage_final = builder_->createOp(spv::OpPhi, type_uint_, id_vector_temp_);
@@ -1152,7 +1158,7 @@ index 27811a6..d2f33cb 100644
      // invalidated - if no GPU-written data nearby that was not intended to be
      // invalidated since it's not in sync with CPU memory and can't be
 diff --git a/src/graphics/vulkan/command_processor.cpp b/src/graphics/vulkan/command_processor.cpp
-index 44aa9e2..3c82771 100644
+index 44aa9e2..4deb86d 100644
 --- a/src/graphics/vulkan/command_processor.cpp
 +++ b/src/graphics/vulkan/command_processor.cpp
 @@ -12,11 +12,20 @@
@@ -2008,7 +2014,7 @@ index 44aa9e2..3c82771 100644
    // Two UINT32_MAX if no components actually existing in the RT are written.
    uint32_t rt_keep_masks[4][2];
    for (uint32_t i = 0; i < xenos::kMaxColorRenderTargets; ++i) {
-@@ -6542,6 +7092,18 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6542,6 +7092,26 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
        RenderTargetCache::GetPSIColorFormatInfo(
            color_info.color_format, (normalized_color_mask >> (i * 4)) & 0b1111, rt_clamp[i][0],
            rt_clamp[i][1], rt_clamp[i][2], rt_clamp[i][3], rt_keep_masks[i][0], rt_keep_masks[i][1]);
@@ -2016,18 +2022,26 @@ index 44aa9e2..3c82771 100644
 +      // autoport: AUTOPORT_FLOAT_RT_CLAMP: the host render target path stores
 +      // 7e3 targets as R16G16B16A16_SFLOAT, which keeps negative values and
 +      // values above 31.875 that the guest format clamps away.
++      // 16-bit float targets: Xenos ones reach 131008 with no infinity, host
++      // ones overflow to infinity above 65504 (Halo 3's bloom then turns the
++      // whole frame NaN when plasma lights the scene), so clamp to the host
++      // range.
 +      bool is_7e3 =
 +          color_info.color_format == xenos::ColorRenderTargetFormat::k_2_10_10_10_FLOAT ||
 +          color_info.color_format ==
 +              xenos::ColorRenderTargetFormat::k_2_10_10_10_FLOAT_AS_16_16_16_16;
-+      rt_clamp[i][0] = is_7e3 ? 0.0f : -FLT_MAX;
-+      rt_clamp[i][1] = is_7e3 ? 0.0f : -FLT_MAX;
-+      rt_clamp[i][2] = is_7e3 ? 31.875f : FLT_MAX;
-+      rt_clamp[i][3] = is_7e3 ? 1.0f : FLT_MAX;
++      bool is_float16 =
++          color_info.color_format == xenos::ColorRenderTargetFormat::k_16_16_FLOAT ||
++          color_info.color_format == xenos::ColorRenderTargetFormat::k_16_16_16_16_FLOAT;
++      float float_max = is_float16 ? 65504.0f : FLT_MAX;
++      rt_clamp[i][0] = is_7e3 ? 0.0f : -float_max;
++      rt_clamp[i][1] = is_7e3 ? 0.0f : -float_max;
++      rt_clamp[i][2] = is_7e3 ? 31.875f : float_max;
++      rt_clamp[i][3] = is_7e3 ? 1.0f : float_max;
      }
    }
  
-@@ -6645,6 +7207,21 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6645,6 +7215,21 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
    xenos::CompareFunction alpha_test_function = rb_colorcontrol.alpha_test_enable
                                                     ? rb_colorcontrol.alpha_func
                                                     : xenos::CompareFunction::kAlways;
@@ -2049,7 +2063,7 @@ index 44aa9e2..3c82771 100644
    flags |= uint32_t(alpha_test_function) << SpirvShaderTranslator::kSysFlag_AlphaPassIfLess_Shift;
    // Gamma writing.
    // Gamma targets stored as UNORM16 hold linear values for blending, and
-@@ -6836,6 +7413,20 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6836,6 +7421,20 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
        uint32_t& texture_signs_uint = system_constants_.texture_swizzled_signs[texture_index >> 2];
        uint32_t texture_signs_shift = 8 * (texture_index & 3);
        uint8_t texture_signs = texture_cache_->GetActiveTextureSwizzledSigns(texture_index);
@@ -2070,7 +2084,7 @@ index 44aa9e2..3c82771 100644
        uint32_t texture_signs_shifted = uint32_t(texture_signs) << texture_signs_shift;
        uint32_t texture_signs_mask = ((UINT32_C(1) << 8) - 1) << texture_signs_shift;
        dirty |= (texture_signs_uint & texture_signs_mask) != texture_signs_shifted;
-@@ -6884,6 +7475,40 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6884,6 +7483,40 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
    }
  
    // Alpha test.
@@ -2111,7 +2125,7 @@ index 44aa9e2..3c82771 100644
    dirty |= system_constants_.alpha_test_reference != rb_alpha_ref;
    system_constants_.alpha_test_reference = rb_alpha_ref;
    uint32_t alpha_to_mask =
-@@ -6939,6 +7564,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6939,6 +7572,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
          UINT32_C(0x3F800000) + (color_exp_bias << 23);
      dirty |= system_constants_.color_exp_bias[i] != color_exp_bias_scale;
      system_constants_.color_exp_bias[i] = color_exp_bias_scale;
