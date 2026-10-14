@@ -1074,28 +1074,34 @@ index 560d1f7..94ae31b 100644
    texture.texture_cache().texture_became_outdated_.store(true, std::memory_order_release);
  }
 diff --git a/src/graphics/shared_memory.cpp b/src/graphics/shared_memory.cpp
-index 27811a6..8b10e89 100644
+index 27811a6..d2f33cb 100644
 --- a/src/graphics/shared_memory.cpp
 +++ b/src/graphics/shared_memory.cpp
-@@ -13,6 +13,7 @@
+@@ -13,6 +13,8 @@
  #include <cstring>
  #include <utility>
  
 +#include <cstdlib>
++#include <rex/platform.h>
  #include <rex/assert.h>
  #include <rex/bit.h>
  #include <rex/dbg.h>
-@@ -525,7 +526,14 @@ std::pair<uint32_t, uint32_t> SharedMemory::MemoryInvalidationCallback(
+@@ -525,7 +527,19 @@ std::pair<uint32_t, uint32_t> SharedMemory::MemoryInvalidationCallback(
  
    auto global_lock = global_critical_region_.Acquire();
  
 -  if (!exact_range) {
-+  // autoport: AUTOPORT_INVALIDATION_WIDEN=0 invalidates only the written pages
-+  // instead of up to 64 pages around them (1 MB with macOS's 16 KB pages, which
-+  // can throw out many textures near frequently written CPU data).
++  // autoport: invalidate only the written pages instead of up to 64 pages
++  // around them. With macOS's 16 KB pages the widened range is 1 MB, and at
++  // Halo 3's Sierra 117 not widening took the frame rate from 9.9 to 13.1 fps
++  // (fewer render passes and less work between them), so it's off by default
++  // on macOS. AUTOPORT_INVALIDATION_WIDEN=1 or =0 overrides it.
 +  static const bool widen_invalidation = [] {
 +    const char* value = std::getenv("AUTOPORT_INVALIDATION_WIDEN");
-+    return !value || std::strcmp(value, "0") != 0;
++    if (!value) {
++      return !REX_PLATFORM_MAC;
++    }
++    return std::strcmp(value, "0") != 0;
 +  }();
 +  if (!exact_range && widen_invalidation) {
      // Check if a somewhat wider range (up to 256 KB with 4 KB pages) can be
