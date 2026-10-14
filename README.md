@@ -224,6 +224,11 @@ What differs from the Linux path:
   touches memory the pass's earlier draws access ends the pass instead. Every
   300 frames the log says how many went in front of a pass, outside one, ended
   one, or were drawn because the compute pipeline couldn't be created.
+  A vertex shader whose moved dispatch turns out to feed a tessellated draw in
+  the same pass runs in place from then on (logged once): Sierra 117's water
+  computes its tessellation factors this way (`E63384A95752C73D`), and broke
+  when that dispatch was moved past an earlier draw, though nothing tracked
+  overlapped.
   `AUTOPORT_MEMEXPORT_COMPUTE=inplace` runs the dispatches where the draws were
   (ending the pass), to tell translation problems from ordering problems;
   `=emptypass` only moves them in front of a pass with no draws yet.
