@@ -225,7 +225,8 @@ What differs from the Linux path:
   300 frames the log says how many went in front of a pass, outside one, ended
   one, or were drawn because the compute pipeline couldn't be created.
   `AUTOPORT_MEMEXPORT_COMPUTE=inplace` runs the dispatches where the draws were
-  (ending the pass), to tell translation problems from ordering problems.
+  (ending the pass), to tell translation problems from ordering problems;
+  `=emptypass` only moves them in front of a pass with no draws yet.
   `AUTOPORT_MEMEXPORT_COMPUTE_SKIP=<hash>[,<hash>...]` keeps those vertex
   shaders on the drawing path, to find one that computes differently (the log
   names each converted shader: "vertex shader ... memexports from a compute
