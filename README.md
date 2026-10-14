@@ -230,6 +230,10 @@ What differs from the Linux path:
   computes its tessellation factors this way (`E63384A95752C73D`), and broke
   when that dispatch was moved past an earlier draw, though nothing tracked
   overlapped.
+  On macOS no barrier is inserted between the dispatches of a pass: MoltenVK
+  runs them as serial Metal dispatches (each completes before the next starts),
+  and with argument buffers every barrier outside a render pass ends the
+  compute encoder; `AUTOPORT_MEMEXPORT_COMPUTE_BARRIERS=1` inserts them anyway.
   `AUTOPORT_MEMEXPORT_COMPUTE=inplace` runs the dispatches where the draws were
   (ending the pass), to tell translation problems from ordering problems;
   `=emptypass` only moves them in front of a pass with no draws yet.
