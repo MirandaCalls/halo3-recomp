@@ -2086,7 +2086,7 @@ index 9ba4cd2..ad757c0 100644
          MarkEdramBufferModified();
        }
 diff --git a/src/graphics/vulkan/shared_memory.cpp b/src/graphics/vulkan/shared_memory.cpp
-index 1ff4cab..489b849 100644
+index 1ff4cab..ae01947 100644
 --- a/src/graphics/vulkan/shared_memory.cpp
 +++ b/src/graphics/vulkan/shared_memory.cpp
 @@ -20,12 +20,21 @@
@@ -2213,19 +2213,26 @@ index 1ff4cab..489b849 100644
  bool VulkanSharedMemory::AllocateSparseHostGpuMemoryRange(uint32_t offset_allocations,
                                                            uint32_t length_allocations) {
    if (!length_allocations) {
-@@ -283,6 +371,11 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
+@@ -283,6 +371,18 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
    if (!num_upload_ranges) {
      return true;
    }
 +  if (host_memory_imported_) {
 +    // The buffer is guest memory: the data is already there, and host writes
-+    // made before a submission are visible to it.
++    // made before a submission are visible to it. The ranges still have to be
++    // marked valid (and watched for CPU writes) like after an upload - users
++    // such as the texture cache only consider data up to date in valid
++    // ranges, and would otherwise reload their textures on every use.
++    for (uint32_t i = 0; i < num_upload_ranges; ++i) {
++      MakeRangeValid(upload_page_ranges[i].first << page_size_log2(),
++                     upload_page_ranges[i].second << page_size_log2(), false);
++    }
 +    return true;
 +  }
  
    auto& range_front = upload_page_ranges[0];
    auto& range_back = upload_page_ranges[num_upload_ranges - 1];
-@@ -338,6 +431,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
+@@ -338,6 +438,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
                    upload_buffer_size);
        if (upload_buffer_previous != upload_buffer && !upload_regions_.empty()) {
          assert_true(upload_buffer_previous != VK_NULL_HANDLE);
@@ -2233,7 +2240,7 @@ index 1ff4cab..489b849 100644
          command_buffer.CmdVkCopyBuffer(upload_buffer_previous, buffer_,
                                         uint32_t(upload_regions_.size()), upload_regions_.data());
          upload_regions_.clear();
-@@ -357,6 +451,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
+@@ -357,6 +458,7 @@ bool VulkanSharedMemory::UploadRanges(const std::pair<uint32_t, uint32_t>* uploa
    }
    if (!upload_regions_.empty()) {
      assert_true(upload_buffer_previous != VK_NULL_HANDLE);
