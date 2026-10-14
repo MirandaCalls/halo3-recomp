@@ -1,15 +1,26 @@
-# Halo 3, native on Linux and macOS — with ZeroTier system link
+# halo3-recomp
 
-Recompiles your own Halo 3 (Xbox 360) disc image into a native Linux or macOS binary and
-plays it with working **system link (LAN) multiplayer**, including between
-machines that only share a **ZeroTier** network.
+A native Linux and macOS port of Halo 3. It recompiles your own Halo 3 (Xbox 360)
+disc image into a native binary and plays it with working **system link (LAN)
+multiplayer**, including between machines that only share a **ZeroTier**
+network.
+
+This project is a fork of
+[summers-aaron/xenon-pc-comp](https://github.com/summers-aaron/xenon-pc-comp),
+which built Halo 3 for Linux. This fork adds the macOS port (Apple Silicon,
+through MoltenVK) along with the rendering fixes and performance work it
+needed. Most of those changes are macOS-only defaults; the renderer fixes
+that apply everywhere (tessellation, memexport barriers) haven't been
+retested on Linux yet.
 
 Built on [ReXGlue](https://github.com/rexglue/rexglue-sdk), the open-source
 Xbox 360 static-recompilation toolchain. This repository is the whole recipe:
 the ISO → native pipeline (`autoport/`), the ReXGlue changes that make Halo 3
-(and specifically system link) work on Linux, and the launcher.
+(and specifically system link) work on Linux and macOS, and the launcher.
 
 ## Requirements
+
+### Linux
 
 - Linux x86-64 (developed on Fedora 44), a Vulkan-capable GPU
 - `podman`, `git`, `python3`
@@ -17,9 +28,10 @@ the ISO → native pipeline (`autoport/`), the ReXGlue changes that make Halo 3
 - Your own Halo 3 disc image (ISO); it stays on your machine
 - For internet play: both machines on the same ZeroTier network
 
-### macOS (experimental, untested)
+### macOS
 
-- macOS on Apple Silicon or Intel, with Xcode installed (the SDK builds MoltenVK
+- macOS on Apple Silicon (tested on an M3 MacBook Air;
+  Intel Macs are untested), with Xcode installed (the SDK builds MoltenVK
   from source, which needs the full Xcode, not just the command-line tools)
 - Homebrew: `brew install bash cmake ninja python` (the scripts need bash 4.4+,
   which macOS lacks, and python 3.11+; setup installs `capstone` into a private
@@ -28,15 +40,14 @@ the ISO → native pipeline (`autoport/`), the ReXGlue changes that make Halo 3
 
 On macOS everything builds natively with Xcode's clang instead of in the
 container; Vulkan runs through MoltenVK, which the SDK bundles. The same
-`./setup-halo3.sh` and `./play-halo3.sh` commands work. This port has not been
-built or run on a Mac yet, so expect to fix build errors along the way; see
-"macOS port notes" below.
+`./setup-halo3.sh` and `./play-halo3.sh` commands work. See "macOS port notes"
+below for what differs and the switches for diagnosing rendering issues.
 
 ## Build
 
 ```bash
-git clone <this repo> xenon-pc-comp
-cd xenon-pc-comp
+git clone https://github.com/MirandaCalls/halo3-recomp.git
+cd halo3-recomp
 ./setup-halo3.sh "/path/to/Halo 3.iso"
 ```
 
@@ -98,6 +109,10 @@ Status: Halo 3 boots to the menu, campaign loads (Arrival → Sierra 117 and
 beyond), and system link multiplayer works between instances/machines. The
 `--native` renderer is experimental; the default emulated Xenos renderer is the
 well-tested path.
+
+On macOS (M3 MacBook Air) the campaign renders correctly, including the
+tessellated water, at roughly 25–30 fps; the frame rate is still being worked
+on (see "Measuring GPU time per render pass").
 
 ## Notes
 
