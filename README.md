@@ -168,6 +168,12 @@ What differs from the Linux path:
   alpha drops below the cutoff and the unlit albedo stays: flickering green dots
   on ferns. The lower cutoff hides most of them; the root cause (how the
   lighting pass's texture coordinate derivatives come out) is still open.
+- Guest draws track the shared memory ranges they read (vertex and index
+  buffers) and memexport, and only get a barrier when a later draw reads or
+  overwrites memory an earlier one wrote or read since the last barrier. The
+  SDK inserted one after every memexport draw, which ended a render pass each
+  time (~110 per frame in Halo 3). `AUTOPORT_MEMEXPORT_BARRIERS=always` restores
+  that.
 - `AUTOPORT_TEXTURE_STATS=1` logs, every 300 frames, texture loads per frame
   (first loads and reloads), how many texture invalidations came from CPU and
   GPU writes, and the most reloaded textures.
