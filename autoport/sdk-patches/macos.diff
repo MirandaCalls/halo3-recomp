@@ -928,7 +928,7 @@ index 34a9a81..219e262 100644
    // Write coverage to gl_SampleMask and discard if zero (FBO mode only).
    if (!edram_fragment_shader_interlock_) {
 diff --git a/src/graphics/pipeline/texture/cache.cpp b/src/graphics/pipeline/texture/cache.cpp
-index 560d1f7..d0be231 100644
+index 560d1f7..94ae31b 100644
 --- a/src/graphics/pipeline/texture/cache.cpp
 +++ b/src/graphics/pipeline/texture/cache.cpp
 @@ -13,6 +13,11 @@
@@ -943,7 +943,7 @@ index 560d1f7..d0be231 100644
  #include <rex/assert.h>
  #include <rex/chrono/clock.h>
  #include <rex/cvar.h>
-@@ -128,6 +133,70 @@ REXCVAR_DEFINE_BOOL(pre_mask_resolve_l2_block, true, "GPU",
+@@ -128,6 +133,72 @@ REXCVAR_DEFINE_BOOL(pre_mask_resolve_l2_block, true, "GPU",
  
  namespace rex::graphics {
  
@@ -960,7 +960,8 @@ index 560d1f7..d0be231 100644
 +  };
 +  bool enabled = std::getenv("AUTOPORT_TEXTURE_STATS") != nullptr;
 +  std::mutex mutex;
-+  uint64_t loads = 0, first_loads = 0, cpu_invalidations = 0, gpu_invalidations = 0;
++  uint64_t loads = 0, first_loads = 0, cpu_invalidations = 0, gpu_invalidations = 0,
++           evictions = 0;
 +  std::unordered_set<const void*> seen;
 +  std::unordered_map<uint64_t, Entry> by_texture;
 +  uint32_t frames = 0;
@@ -989,9 +990,9 @@ index 560d1f7..d0be231 100644
 +  double f = double(stats.frames);
 +  REXGPU_INFO(
 +      "autoport: textures per frame: {:.1f} loads ({:.1f} first loads, {:.1f} reloads), "
-+      "invalidations {:.1f} by CPU writes, {:.1f} by GPU writes",
++      "invalidations {:.1f} by CPU writes, {:.1f} by GPU writes, {:.1f} textures evicted",
 +      stats.loads / f, stats.first_loads / f, (stats.loads - stats.first_loads) / f,
-+      stats.cpu_invalidations / f, stats.gpu_invalidations / f);
++      stats.cpu_invalidations / f, stats.gpu_invalidations / f, stats.evictions / f);
 +  std::vector<std::pair<uint64_t, AutoportTextureStats::Entry>> top(stats.by_texture.begin(),
 +                                                                     stats.by_texture.end());
 +  std::sort(top.begin(), top.end(),
@@ -1006,6 +1007,7 @@ index 560d1f7..d0be231 100644
 +        top[i].second.gpu_invalidations / f);
 +  }
 +  stats.loads = stats.first_loads = stats.cpu_invalidations = stats.gpu_invalidations = 0;
++  stats.evictions = 0;
 +  stats.by_texture.clear();
 +  stats.frames = 0;
 +}
@@ -1014,7 +1016,38 @@ index 560d1f7..d0be231 100644
  const TextureCache::LoadShaderInfo TextureCache::load_shader_info_[kLoadShaderCount] = {
      // k8bpb
      {3, 4, 1, 4},
-@@ -830,9 +899,23 @@ void TextureCache::Texture::WatchCallback(
+@@ -335,6 +406,11 @@ void TextureCache::CompletedSubmissionUpdated(uint64_t completed_submission_inde
+     assert_true(found_texture_it != textures_.end());
+     if (found_texture_it != textures_.end()) {
+       assert_true(found_texture_it->second.get() == texture);
++      if (AutoportTextureStats& stats = GetAutoportTextureStats(); stats.enabled) {
++        std::lock_guard<std::mutex> lock(stats.mutex);
++        ++stats.evictions;
++        stats.seen.erase(texture);
++      }
+       textures_.erase(found_texture_it);
+       // `texture` is invalid now.
+     }
+@@ -468,6 +544,18 @@ bool TextureCache::CommitPreparedTextureLoad(const PendingTextureLoad& pending_l
+   }
+ 
+   Texture& texture = *pending_load.texture;
++  if (AutoportTextureStats& stats = GetAutoportTextureStats(); stats.enabled) {
++    std::lock_guard<std::mutex> lock(stats.mutex);
++    ++stats.loads;
++    if (stats.seen.insert(&texture).second) {
++      ++stats.first_loads;
++    }
++    ++stats
++          .by_texture[AutoportTextureStats::Key(
++              texture.key().base_page, texture.key().width_minus_1, texture.key().height_minus_1,
++              uint32_t(texture.key().format))]
++          .loads;
++  }
+   TextureKey texture_key = texture.key();
+   if (texture_key.scaled_resolve) {
+     // Make sure all the scaled resolve memory is resident and accessible from
+@@ -830,9 +918,23 @@ void TextureCache::Texture::WatchCallback(
    }
  }
  
@@ -1040,25 +1073,6 @@ index 560d1f7..d0be231 100644
    texture.WatchCallback(global_lock, argument != 0);
    texture.texture_cache().texture_became_outdated_.store(true, std::memory_order_release);
  }
-@@ -1028,6 +1111,18 @@ bool TextureCache::LoadTextureData(Texture& texture) {
-   if (!PrepareTextureLoad(texture, pending_load, pending_ranges, pending_range_count)) {
-     return true;
-   }
-+  if (AutoportTextureStats& stats = GetAutoportTextureStats(); stats.enabled) {
-+    std::lock_guard<std::mutex> lock(stats.mutex);
-+    ++stats.loads;
-+    if (stats.seen.insert(&texture).second) {
-+      ++stats.first_loads;
-+    }
-+    ++stats
-+          .by_texture[AutoportTextureStats::Key(
-+              texture.key().base_page, texture.key().width_minus_1, texture.key().height_minus_1,
-+              uint32_t(texture.key().format))]
-+          .loads;
-+  }
- 
-   std::pair<uint32_t, uint32_t> pending_range_pairs[2];
-   for (size_t i = 0; i < pending_range_count; ++i) {
 diff --git a/src/graphics/shared_memory.cpp b/src/graphics/shared_memory.cpp
 index 27811a6..8b10e89 100644
 --- a/src/graphics/shared_memory.cpp
