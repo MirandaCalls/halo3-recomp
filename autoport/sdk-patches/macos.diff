@@ -3828,7 +3828,7 @@ index 517cccb..59d68d9 100644
          assert_unhandled_case(header.command);
          break;
 diff --git a/src/graphics/vulkan/pipeline_cache.cpp b/src/graphics/vulkan/pipeline_cache.cpp
-index 5a82115..b30ca2d 100644
+index 5a82115..bb1b4f2 100644
 --- a/src/graphics/vulkan/pipeline_cache.cpp
 +++ b/src/graphics/vulkan/pipeline_cache.cpp
 @@ -10,6 +10,7 @@
@@ -3863,7 +3863,26 @@ index 5a82115..b30ca2d 100644
    tessellation_factor = max(
        tessellation_factor, xe_system_cbuffer.xe_tessellation_factor_range_min);
    tessellation_factor = min(
-@@ -1815,6 +1822,22 @@ bool VulkanPipelineCache::GetCurrentStateDescription(
+@@ -510,6 +517,10 @@ void VulkanPipelineCache::InitializeShaderStorage(const std::filesystem::path& c
+         rex::path_to_utf8(pipeline_storage_file_path));
+     return;
+   }
++  // autoport: "a" modes start reading at the end of the file on macOS (BSD
++  // libc seeks there on open), so the header check failed and the storage was
++  // emptied on every launch; read from the start as on glibc.
++  rex::filesystem::Seek(pipeline_storage_file_, 0, SEEK_SET);
+   pipeline_storage_file_flush_needed_ = false;
+   // 'XEPS'.
+   const uint32_t pipeline_storage_magic = 0x53504558;
+@@ -595,6 +606,7 @@ void VulkanPipelineCache::InitializeShaderStorage(const std::filesystem::path& c
+     pipeline_storage_file_ = nullptr;
+     return;
+   }
++  rex::filesystem::Seek(shader_storage_file_, 0, SEEK_SET);
+   ++shader_storage_index_;
+   shader_storage_file_flush_needed_ = false;
+   struct {
+@@ -1815,6 +1827,22 @@ bool VulkanPipelineCache::GetCurrentStateDescription(
        if (normalized_depth_control.z_enable) {
          description_out.depth_write_enable = normalized_depth_control.z_write_enable;
          description_out.depth_compare_op = normalized_depth_control.zfunc;
