@@ -1,0 +1,69 @@
+diff --git a/MoltenVK/MoltenVK/Commands/MVKCommandBuffer.mm b/MoltenVK/MoltenVK/Commands/MVKCommandBuffer.mm
+index 707c267..1d945b4 100644
+--- a/MoltenVK/MoltenVK/Commands/MVKCommandBuffer.mm
++++ b/MoltenVK/MoltenVK/Commands/MVKCommandBuffer.mm
+@@ -26,6 +26,8 @@
+ #include "MVKCmdDraw.h"
+ #include "MVKCmdRendering.h"
+ #include <sys/mman.h>
++#include <cstdlib>
++#include <cstring>
+ 
+ using namespace std;
+ 
+@@ -1060,10 +1062,27 @@ void MVKCommandEncoder::endCurrentMetalEncoding() {
+ 	encodeTimestampStageCounterSamples();
+ }
+ 
+-static MTLDispatchType getDispatchType(MVKCommandUse use) {
++// autoport: vkCmdDispatch encodes concurrent dispatches when every pipeline
++// barrier outside a render pass ends the compute encoder (argument buffers with
++// a residency set, see MVKCmdPipelineBarrier::encode), so the barriers the app
++// records still order dependent dispatches. Serial dispatch makes every
++// dispatch wait for the previous one to finish, even where Vulkan lets them
++// overlap: a frame of many small, latency-bound dispatches leaves the GPU
++// mostly idle. AUTOPORT_MVK_SERIAL_DISPATCH=1 restores serial dispatch.
++static bool mvkAutoportSerialDispatchForced() {
++	static const bool forced = [] {
++		const char* value = getenv("AUTOPORT_MVK_SERIAL_DISPATCH");
++		return value && *value && strcmp(value, "0") != 0;
++	}();
++	return forced;
++}
++
++static MTLDispatchType getDispatchType(MVKCommandUse use, bool concurrentDispatch) {
+ 	switch (use) {
+ 		case kMVKCommandUseAccumOcclusionQuery:
+ 			return MTLDispatchTypeConcurrent;
++		case kMVKCommandUseDispatch:
++			return concurrentDispatch ? MTLDispatchTypeConcurrent : MTLDispatchTypeSerial;
+ 		default:
+ 			return MTLDispatchTypeSerial;
+ 	}
+@@ -1078,20 +1097,22 @@ static bool wantsSeparateComputeEncoder(MVKCommandUse use) {
+ 	}
+ }
+ 
+-static bool shouldStartNewEncoder(MVKCommandUse prev, MVKCommandUse next) {
++static bool shouldStartNewEncoder(MVKCommandUse prev, MVKCommandUse next, bool concurrentDispatch) {
+ 	if (prev == next)
+ 		return false;
+-	if (getDispatchType(prev) != getDispatchType(next))
++	if (getDispatchType(prev, concurrentDispatch) != getDispatchType(next, concurrentDispatch))
+ 		return true;
+ 	return wantsSeparateComputeEncoder(prev) || wantsSeparateComputeEncoder(next);
+ }
+ 
+ id<MTLComputeCommandEncoder> MVKCommandEncoder::getMTLComputeEncoder(MVKCommandUse cmdUse) {
+ 	bool needWaits = false;
+-	if (!_mtlComputeEncoder || shouldStartNewEncoder(_mtlComputeEncoderUse, cmdUse)) {
++	bool concurrentDispatch = !mvkAutoportSerialDispatchForced() && isUsingMetalArgumentBuffers() &&
++	                          getDevice()->hasResidencySet();
++	if (!_mtlComputeEncoder || shouldStartNewEncoder(_mtlComputeEncoderUse, cmdUse, concurrentDispatch)) {
+ 		needWaits = true;
+ 		endCurrentMetalEncoding();
+-		_mtlComputeEncoder = [_mtlCmdBuffer computeCommandEncoderWithDispatchType:getDispatchType(cmdUse)];
++		_mtlComputeEncoder = [_mtlCmdBuffer computeCommandEncoderWithDispatchType:getDispatchType(cmdUse, concurrentDispatch)];
+ 		retainIfImmediatelyEncoding(_mtlComputeEncoder);
+ 		beginMetalComputeEncoding(cmdUse);
+ 	}

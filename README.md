@@ -298,6 +298,14 @@ What differs from the Linux path:
   the next vblank is delivered right away instead of at its slot. The vblank
   rate over time stays 60 Hz and frames on time are unaffected. `0` turns it
   off; another value changes the threshold in ms.
+- `AUTOPORT_MVK_SERIAL_DISPATCH=1`: the bundled MoltenVK is patched
+  (`autoport/sdk-patches/moltenvk.diff`) to encode `vkCmdDispatch` as
+  concurrent Metal dispatches when pipeline barriers end the compute encoder
+  (argument buffers with a residency set), so dispatches with no barrier
+  between them may overlap, as Vulkan allows. Halo 3's particle updates are
+  ~100 small dispatches a frame, a few running long loops on a handful of
+  threads; serially they took about 5 ms of mostly idle GPU per frame. This
+  switch restores serial dispatch.
 - `AUTOPORT_TEXTURE_SANITIZE=1` replaces infinite texture fetch results with
   ±65504 and NaN with 0. Xenos 16-bit floats have no infinity or NaN (exponent
   31 holds 65536 to 131008), but 16-bit float textures are copied to the host
