@@ -230,13 +230,12 @@ What differs from the Linux path:
   computes its tessellation factors this way (`E63384A95752C73D`), and broke
   when that dispatch was moved past an earlier draw, though nothing tracked
   overlapped.
-  The patched MoltenVK runs dispatches with no barrier between them
-  concurrently, and every barrier outside a render pass ends the compute
-  encoder, so on macOS a barrier goes between the dispatches of a pass only
-  where one reads memory an earlier one wrote (without them, muzzle flashes and
-  other effects went missing). `AUTOPORT_MEMEXPORT_COMPUTE_BARRIERS=1` also
-  orders dispatches that only write the same memory, `=0` never inserts one
-  (the default with `AUTOPORT_MVK_SERIAL_DISPATCH=1`).
+  On macOS no barrier is inserted between the dispatches of a pass: MoltenVK
+  runs them as serial Metal dispatches (each completes before the next starts),
+  and with argument buffers every barrier outside a render pass ends the
+  compute encoder; `AUTOPORT_MEMEXPORT_COMPUTE_BARRIERS=1` inserts them anyway.
+  (Concurrent dispatch, via a MoltenVK patch, was tried: with the barriers it
+  then needed between dependent updates, it gained nothing.)
   `AUTOPORT_MEMEXPORT_COMPUTE=inplace` runs the dispatches where the draws were
   (ending the pass), to tell translation problems from ordering problems;
   `=emptypass` only moves them in front of a pass with no draws yet.
@@ -301,14 +300,6 @@ What differs from the Linux path:
   the next vblank is delivered right away instead of at its slot. The vblank
   rate over time stays 60 Hz and frames on time are unaffected. `0` turns it
   off; another value changes the threshold in ms.
-- `AUTOPORT_MVK_SERIAL_DISPATCH=1`: the bundled MoltenVK is patched
-  (`autoport/sdk-patches/moltenvk.diff`) to encode `vkCmdDispatch` as
-  concurrent Metal dispatches when pipeline barriers end the compute encoder
-  (argument buffers with a residency set), so dispatches with no barrier
-  between them may overlap, as Vulkan allows. Halo 3's particle updates are
-  ~100 small dispatches a frame, a few running long loops on a handful of
-  threads; serially they took about 5 ms of mostly idle GPU per frame. This
-  switch restores serial dispatch.
 - `AUTOPORT_TEXTURE_SANITIZE=1` replaces infinite texture fetch results with
   ±65504 and NaN with 0. Xenos 16-bit floats have no infinity or NaN (exponent
   31 holds 65536 to 131008), but 16-bit float textures are copied to the host

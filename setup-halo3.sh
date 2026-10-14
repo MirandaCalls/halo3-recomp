@@ -24,8 +24,6 @@ SRC=$ROOT/ref/rexglue-sdk
 PATCH=$ROOT/autoport/sdk-patches/halo3-system-link.diff
 # applied on top of PATCH: macOS build fixes (platform-guarded, harmless on Linux)
 MACOS_PATCH=$ROOT/autoport/sdk-patches/macos.diff
-# applied to the SDK's MoltenVK submodule (thirdparty/moltenvk)
-MVK_PATCH=$ROOT/autoport/sdk-patches/moltenvk.diff
 
 if [ -z "$ISO" ] || [ ! -f "$ISO" ]; then
   echo "usage: $0 /path/to/Halo 3.iso" >&2
@@ -88,7 +86,7 @@ git -C "$SRC" submodule update --init --recursive
 # re-apply both to a clean tree; submodules and the out/ build directory are kept,
 # so only the files the patches touch get rebuilt.
 PATCH_STAMP=.autoport-patches
-want=$(cat "$PATCH" "$MACOS_PATCH" "$MVK_PATCH" | git hash-object --stdin)
+want=$(cat "$PATCH" "$MACOS_PATCH" | git hash-object --stdin)
 if [ "$(cat "$SRC/$PATCH_STAMP" 2>/dev/null)" = "$want" ]; then
   echo "patches already applied"
 else
@@ -96,8 +94,8 @@ else
   git -C "$SRC" clean -fdq -e out -e "$PATCH_STAMP"
   git -C "$SRC" apply "$PATCH"
   git -C "$SRC" apply "$MACOS_PATCH"
+  # MoltenVK was briefly patched here; keep its checkout clean.
   git -C "$SRC/thirdparty/moltenvk" checkout -- .
-  git -C "$SRC/thirdparty/moltenvk" apply "$MVK_PATCH"
   echo "$want" > "$SRC/$PATCH_STAMP"
   echo "patches applied"
 fi
