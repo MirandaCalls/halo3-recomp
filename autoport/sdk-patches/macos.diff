@@ -2134,7 +2134,7 @@ index 517cccb..59d68d9 100644
          assert_unhandled_case(header.command);
          break;
 diff --git a/src/graphics/vulkan/pipeline_cache.cpp b/src/graphics/vulkan/pipeline_cache.cpp
-index 5a82115..bfc9787 100644
+index 5a82115..b30ca2d 100644
 --- a/src/graphics/vulkan/pipeline_cache.cpp
 +++ b/src/graphics/vulkan/pipeline_cache.cpp
 @@ -10,6 +10,7 @@
@@ -2145,7 +2145,20 @@ index 5a82115..bfc9787 100644
  #include <array>
  #include <atomic>
  #include <cstdint>
-@@ -181,7 +182,9 @@ void main() {
+@@ -104,7 +105,11 @@ constexpr bool IsPatchIndexedHostVertexShaderType(
+ 
+ std::string GetTessellationSystemConstantsBlockGlsl() {
+   std::string source;
+-  source += "layout(set = 0, binding = 0, std140) uniform XeSystemConstants {\n";
++  // The system constants are in the constants set, not set 0 (shared memory
++  // and EDRAM), where the translated shaders also read them.
++  source += fmt::format("layout(set = {}, binding = {}, std140) uniform XeSystemConstants {{\n",
++                        uint32_t(SpirvShaderTranslator::kDescriptorSetConstants),
++                        uint32_t(SpirvShaderTranslator::kConstantBufferSystem));
+   source += fmt::format("  layout(offset = {}) uint xe_vertex_index_endian;\n",
+                         offsetof(SpirvShaderTranslator::SystemConstants, vertex_index_endian));
+   source += fmt::format("  layout(offset = {}) int xe_vertex_base_index;\n",
+@@ -181,7 +186,9 @@ void main() {
    if (endian == 2u || endian == 3u) {
      value = xe_swap_16_in_32(value);
    }
@@ -2156,7 +2169,7 @@ index 5a82115..bfc9787 100644
    tessellation_factor = max(
        tessellation_factor, xe_system_cbuffer.xe_tessellation_factor_range_min);
    tessellation_factor = min(
-@@ -1815,6 +1818,22 @@ bool VulkanPipelineCache::GetCurrentStateDescription(
+@@ -1815,6 +1822,22 @@ bool VulkanPipelineCache::GetCurrentStateDescription(
        if (normalized_depth_control.z_enable) {
          description_out.depth_write_enable = normalized_depth_control.z_write_enable;
          description_out.depth_compare_op = normalized_depth_control.zfunc;
