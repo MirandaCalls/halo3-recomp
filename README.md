@@ -158,12 +158,14 @@ What differs from the Linux path:
   effects), the whole frame flashed. For resolves up to
   `AUTOPORT_RESOLVE_SYNC_MAX_BYTES` (64 KB by default on macOS; `0` turns it
   off), `AUTOPORT_RESOLVE_SYNC` picks what the CPU sees:
-  - `previous` (default): the previous frame's completed resolve, copied into
-    guest memory when the resolve is processed (the delayed readback that
-    `--readback_resolve=fast` does without import).
-  - `signal`: this frame's, by holding the guest's next signals until the GPU
-    has run the resolve, as on the 360. The game then waits for the GPU every
-    frame: 25.6 -> 18.7 fps.
+  - `signal` (default): this frame's, by holding the guest's next signals
+    until the GPU has run the resolve, as on the 360. The game then waits for
+    the GPU every frame, which costs while the GPU can't keep up: 25.6 -> 18.7
+    fps at Sierra 117.
+  - `previous`: the previous frame's completed resolve, copied into guest
+    memory when the resolve is processed (the delayed readback that
+    `--readback_resolve=fast` does without import). 27.7 fps, but the flashes
+    stay.
   - `immediate`: this frame's, by waiting for the GPU right after the resolve.
     The GPU idles mid-frame and Apple GPUs clock down: 14.4 fps.
 
