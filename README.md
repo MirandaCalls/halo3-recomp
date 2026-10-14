@@ -213,6 +213,17 @@ What differs from the Linux path:
   each split a render pass, to measure what they cost; draws may then read
   stale memexported data (particles), so it's a measurement, not a fix. Apple
   GPUs have no barriers inside a render pass (MoltenVK ignores them there).
+- `AUTOPORT_MEMEXPORT_COMPUTE=1` (experimental, with guest memory imported)
+  runs draws that only memexport from their vertex shader (nothing
+  rasterized) as compute dispatches recorded in front of the render pass
+  that's open, instead of drawing them inside it. Halo 3 updates each particle
+  system with such a draw and then draws the particles from the result, and
+  since Apple GPUs have no barriers inside a render pass, the pass had to end
+  between the two: ~110 times a frame, each storing and reloading the render
+  targets (about 10 ms of GPU time per frame at Sierra 117). A dispatch that
+  touches memory the pass's earlier draws access ends the pass instead. Every
+  300 frames the log says how many went in front of a pass, outside one, ended
+  one, or were drawn because the compute pipeline couldn't be created.
 - `AUTOPORT_TEXTURE_STATS=1` logs, every 300 frames, texture loads per frame
   (first loads and reloads), how many texture invalidations came from CPU and
   GPU writes, and the most reloaded textures.
