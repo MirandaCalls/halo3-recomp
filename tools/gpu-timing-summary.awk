@@ -1,12 +1,13 @@
 # Ranked summary of an AUTOPORT_GPU_TIMING_LOG file (GPU time per render pass).
 #   awk -f tools/gpu-timing-summary.awk gpu-timing.log
 #   awk -v from=25 -f tools/gpu-timing-summary.awk gpu-timing.log   # skip the first 25 s
+#   awk -v from=60 -v to=90 -f tools/gpu-timing-summary.awk gpu-timing.log   # 60 s to 90 s only
 # Passes are grouped by kind, size and render targets; "per frame" divides by the
 # number of guest frames in the measured range. At 30 fps a frame has 33.3 ms.
 # Gaps between passes are grouped by the kinds of work recorded in them (the
 # letters in the log's last column, see gpu_pass_timer.h).
 /^#/ { if ($0 ~ /device|not supported|not timed/) notes[nnotes++] = $0; next }
-NF < 8 || $1 < from { next }
+NF < 8 || $1 < from || (to != "" && $1 > to + 0) { next }
 {
   if (!($2 in seen)) { seen[$2] = 1; frames++ }
   if (first == "" || $1 < first) first = $1
