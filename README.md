@@ -220,6 +220,11 @@ What differs from the Linux path:
   the player (or a Phantom firing) overflows Halo 3's bloom, and the NaN that
   follows flashes the whole frame purple, blue or rainbow. On by default on
   macOS; `AUTOPORT_FLOAT_RT_CLAMP=0` turns it off, `=1` turns it on elsewhere.
+- `AUTOPORT_TEXTURE_SANITIZE=1` replaces infinite texture fetch results with
+  ±65504 and NaN with 0. Xenos 16-bit floats have no infinity or NaN (exponent
+  31 holds 65536 to 131008), but 16-bit float textures are copied to the host
+  bit for bit, so those values sample as infinity or NaN (a candidate for the
+  frame-wide flashes when plasma hits the player).
 - `AUTOPORT_FLUSH_DENORMALS=1` treats denormal floats as zero where Xenos does:
   in the "0 × anything = 0" rule of multiplications and dot products, and in
   the inputs of `rcp`, `rsq` and `log`. Halo 3's tone mapping pass
