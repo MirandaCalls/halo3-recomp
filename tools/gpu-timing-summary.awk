@@ -82,7 +82,8 @@ END {
     print "\ntime between passes by the work recorded there:"
     print "  (p barrier, t texture load, b mip blit, u memory upload, r resolve, c resolve clear,"
     print "   k render target transfer, d resolve readback, m memexport readback, i index copy,"
-    print "   g swap, - nothing recorded, ? log without this column)"
+    print "   g swap, barrier kinds: h shared memory, o other buffer, v image,"
+    print "   - nothing recorded, ? log without this column)"
     printf "  %8s %6s %8s %8s  %s\n", "ms/frame", "share", "n/frame", "avg ms", "work"
     for (r = 0; r < 12 && r < nwkeys; r++) {
       best = -1
