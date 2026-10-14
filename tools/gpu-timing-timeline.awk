@@ -23,7 +23,7 @@ $3 == "W" && NF >= 8 {
   if (NF >= 10) { wrm_gpu[b] += $9; early[b] += $10; has_early = 1 }
   has_waits = 1; next
 }
-NF < 8 { next }
+NF < 8 || $3 == "C" { next }
 {
   b = int($1 / step)
   if (!(b in seen_b)) { seen_b[b] = 1; if (min_b == "" || b < min_b) min_b = b; if (b > max_b) max_b = b }
