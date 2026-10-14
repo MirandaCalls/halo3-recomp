@@ -281,6 +281,16 @@ What differs from the Linux path:
   default) applies it to pixel shaders and memexport compute shaders; `ps`
   limits it to pixel shaders, `0` keeps every shader precise, and `all` also
   covers vertex shaders.
+- `AUTOPORT_WAIT_REG_MEM`: when the game's command stream waits on a value
+  that a held guest signal will write (see `AUTOPORT_RESOLVE_SYNC`), macOS
+  waits for that GPU work directly and continues as soon as it's done, instead
+  of sleeping the game's poll interval between checks; other waits sleep at
+  most 1 ms. `AUTOPORT_WAIT_REG_MEM=guest` keeps the game's poll interval.
+- `AUTOPORT_EARLY_SUBMIT_DRAWS=N`: commands reach the GPU only when a
+  submission ends (a swap or a guest fence), so after the game waits on the
+  GPU, the GPU idles while the rest of the frame is recorded. On macOS a
+  resolve also ends the submission when the GPU has finished everything
+  submitted and at least N draws (default 16) are waiting; `0` turns it off.
 - `AUTOPORT_TEXTURE_SANITIZE=1` replaces infinite texture fetch results with
   ±65504 and NaN with 0. Xenos 16-bit floats have no infinity or NaN (exponent
   31 holds 65536 to 131008), but 16-bit float textures are copied to the host
