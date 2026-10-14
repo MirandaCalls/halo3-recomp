@@ -151,18 +151,19 @@ What differs from the Linux path:
   Resolve and memexport readbacks are skipped while it is on, so
   `--readback_resolve` has no effect. GPU time is the same as without it.
 - With guest memory imported, a resolve only lands in guest memory when the
-  host GPU runs it, while the guest's fences are signaled when the command is
-  processed, so the CPU can read a resolve before it's written (or after a
-  later resolve reused the memory). Halo 3 reads a small luminance resolve for
-  its exposure, and the whole frame flashed when plasma hit the player. After
-  resolves up to `AUTOPORT_RESOLVE_SYNC_MAX_BYTES` (64 KB by default on macOS;
-  `0` turns it off), the next guest fence (memory write, event write or
-  interrupt in the command stream) now waits for the GPU first.
-  `AUTOPORT_RESOLVE_SYNC=immediate` waits right after the resolve instead, which
-  also stopped the flashes but took Halo 3 from 27.5 to 14.4 fps: the GPU idles
-  mid-frame and Apple GPUs then clock down. The log lists each distinct resolve
-  once ("autoport: resolve to ...", with ", waiting for the GPU" on the ones
-  that get a wait).
+  host GPU runs it, while the command stream's signals to the guest (memory
+  and event writes, interrupts) were delivered when the command was
+  processed, so the CPU could read a resolve before it was written. Halo 3
+  reads a small luminance resolve for its exposure, and the whole frame
+  flashed when plasma hit the player. After resolves up to
+  `AUTOPORT_RESOLVE_SYNC_MAX_BYTES` (64 KB by default on macOS; `0` turns it
+  off), the next signals are now held until the host GPU has run the resolve,
+  as on the 360, where the GPU writes them itself; the command processor
+  keeps feeding the GPU meanwhile. Waiting for the GPU instead
+  (`AUTOPORT_RESOLVE_SYNC=immediate` after the resolve) also stops the flashes
+  but idles the GPU mid-frame, and Apple GPUs then clock down: 27.5 -> 14.4
+  fps. The log lists each distinct resolve once ("autoport: resolve to ...",
+  with ", waiting for the GPU" on the ones that hold the next signal).
 - If the import fails (the log lacks "Shared memory: using guest physical
   memory directly"), the normal buffer is used, and `play-halo3.sh`'s default
   `--readback_resolve=fast` keeps the lighting right. Without either, the

@@ -1,20 +1,38 @@
 diff --git a/include/rex/graphics/command_processor.h b/include/rex/graphics/command_processor.h
-index cda5d76..8fc4b7c 100644
+index cda5d76..c2ca755 100644
 --- a/include/rex/graphics/command_processor.h
 +++ b/include/rex/graphics/command_processor.h
-@@ -211,6 +211,10 @@ class CommandProcessor {
+@@ -211,6 +211,28 @@ class CommandProcessor {
    virtual uint64_t GetCompletedSubmission() const { return 0; }
  
    virtual void OnPrimaryBufferEnd() {}
-+  // autoport: called before the command stream signals the guest that the GPU
-+  // reached a point (a memory write, an event write or an interrupt), so a
-+  // backend can finish GPU work the guest may read after that signal.
-+  virtual void OnGuestFence() {}
++  // autoport: the command stream's signals to the guest that the GPU reached
++  // a point (memory writes, event writes, interrupts) are held until the host
++  // GPU has finished the work before them when the backend asks for it, like
++  // on the 360, where they come from the GPU itself. The command processor
++  // keeps feeding the GPU meanwhile.
++  // The host submission that must complete before a signal now may reach the
++  // guest, or 0 to deliver it immediately.
++  virtual uint64_t GetGuestFenceSubmission() { return 0; }
++  // The latest completed host submission, without waiting.
++  virtual uint64_t PollGuestSignalCompletedSubmission() { return UINT64_MAX; }
++  void SignalGuestMemory(uint32_t address, uint32_t value);
++  void SignalGuestInterrupt(uint32_t cpu);
++  void DeliverDeferredGuestSignals();
++  uint64_t GetGuestSignalSubmission();
++  struct DeferredGuestSignal {
++    uint64_t submission;
++    bool is_interrupt;
++    uint32_t address;
++    // The value to store (as stored in memory), or the interrupt's CPU.
++    uint32_t value;
++  };
++  std::deque<DeferredGuestSignal> deferred_guest_signals_;
    void ExecuteIndirectBuffer(uint32_t ptr, uint32_t length);
    bool ExecutePacket(memory::RingBuffer* reader);
    bool ExecutePacketType0(memory::RingBuffer* reader, uint32_t packet);
 diff --git a/include/rex/graphics/vulkan/command_processor.h b/include/rex/graphics/vulkan/command_processor.h
-index 0425c32..1937a53 100644
+index 0425c32..81aadf5 100644
 --- a/include/rex/graphics/vulkan/command_processor.h
 +++ b/include/rex/graphics/vulkan/command_processor.h
 @@ -28,6 +28,7 @@
@@ -33,18 +51,21 @@ index 0425c32..1937a53 100644
    uint64_t GetCompletedSubmission() const override {
      return completion_timeline_.GetCompletedSubmissionFromLastUpdate();
    }
-@@ -431,6 +433,10 @@ class VulkanCommandProcessor : public CommandProcessor {
+@@ -431,6 +433,13 @@ class VulkanCommandProcessor : public CommandProcessor {
  
    void ClearTransientDescriptorPools();
    bool IssueCopy_ReadbackResolvePath();
-+  void OnGuestFence() override;
-+  // autoport: a resolve the guest may read on the CPU is waiting for the GPU
-+  // (see IssueCopy); the next guest fence waits for it.
++  uint64_t GetGuestFenceSubmission() override;
++  uint64_t PollGuestSignalCompletedSubmission() override {
++    return completion_timeline_.UpdateAndGetCompletedSubmission();
++  }
++  // autoport: a resolve the guest may read on the CPU hasn't been run by the
++  // GPU yet (see IssueCopy); the next guest signal waits for it.
 +  bool resolve_sync_pending_ = false;
    bool IssueDraw_MemexportReadbackFullPath(uint32_t total_size);
    bool IssueDraw_MemexportReadbackFastPath(uint32_t total_size);
  
-@@ -852,6 +858,14 @@ class VulkanCommandProcessor : public CommandProcessor {
+@@ -852,6 +861,14 @@ class VulkanCommandProcessor : public CommandProcessor {
    VkRenderPass current_render_pass_;
    const VulkanRenderTargetCache::Framebuffer* current_framebuffer_;
    bool in_render_pass_ = false;
@@ -562,7 +583,7 @@ index 8ed0315..e2d36ca 100644
      # Texture cache test: loads a capture's textures and dumps decoded PPMs.
      add_executable(xgpu-texture-test ${XGPU_TOOLS_DIR}/texture_test.cpp
 diff --git a/src/graphics/command_processor.cpp b/src/graphics/command_processor.cpp
-index 479739a..d57f135 100644
+index 479739a..9ec0f70 100644
 --- a/src/graphics/command_processor.cpp
 +++ b/src/graphics/command_processor.cpp
 @@ -11,7 +11,12 @@
@@ -578,7 +599,20 @@ index 479739a..d57f135 100644
  #include <vector>
  #include <string>
  #include <filesystem>
-@@ -801,9 +806,19 @@ void DumpPhysical(const memory::Memory* memory, const std::string& path) {
+@@ -270,8 +275,11 @@ void CommandProcessor::WorkerThreadMain() {
+       PrepareForWait();
+       uint32_t loop_count = 0;
+       do {
++        // Signals held for the host GPU must still reach the guest while the
++        // ring is empty (the guest may be waiting for one to submit more).
++        DeliverDeferredGuestSignals();
+         // If we spin around too much, revert to a "low-power" state.
+-        if (loop_count > 500) {
++        if (loop_count > 500 && deferred_guest_signals_.empty()) {
+           const int wait_time_ms = 5;
+           rex::thread::Wait(write_ptr_index_event_.get(), true,
+                             std::chrono::milliseconds(wait_time_ms));
+@@ -801,9 +809,19 @@ void DumpPhysical(const memory::Memory* memory, const std::string& path) {
    std::vector<uint8_t> buffer(kChunk);
    const uint8_t* base = memory->TranslatePhysical<const uint8_t*>(0);
    for (size_t off = 0; off < kTotal; off += kChunk) {
@@ -599,46 +633,121 @@ index 479739a..d57f135 100644
        std::fill(buffer.begin(), buffer.end(), uint8_t(0));  // unreadable range
      }
      std::fwrite(buffer.data(), 1, kChunk, f);
-@@ -1180,6 +1195,7 @@ bool CommandProcessor::ExecutePacketType3_INTERRUPT(memory::RingBuffer* reader,
+@@ -913,7 +931,58 @@ void CommandProcessor::ExecutePacket(uint32_t ptr, uint32_t count) {
+   } while (reader.read_count());
+ }
  
-   // generate interrupt from the command stream
++uint64_t CommandProcessor::GetGuestSignalSubmission() {
++  uint64_t submission = GetGuestFenceSubmission();
++  // Keep the guest's signals in order behind any that are still held.
++  if (!deferred_guest_signals_.empty()) {
++    submission = std::max(submission, deferred_guest_signals_.back().submission);
++  }
++  return submission;
++}
++
++void CommandProcessor::SignalGuestMemory(uint32_t address, uint32_t value) {
++  uint64_t submission = GetGuestSignalSubmission();
++  if (submission) {
++    deferred_guest_signals_.push_back({submission, false, address, value});
++    DeliverDeferredGuestSignals();
++    return;
++  }
++  memory::store(memory_->TranslatePhysical(address), value);
++}
++
++void CommandProcessor::SignalGuestInterrupt(uint32_t cpu) {
++  uint64_t submission = GetGuestSignalSubmission();
++  if (submission) {
++    deferred_guest_signals_.push_back({submission, true, 0, cpu});
++    DeliverDeferredGuestSignals();
++    return;
++  }
++  if (graphics_system_) {
++    graphics_system_->DispatchInterruptCallback(1, cpu);
++  }
++}
++
++void CommandProcessor::DeliverDeferredGuestSignals() {
++  if (deferred_guest_signals_.empty()) {
++    return;
++  }
++  uint64_t completed = PollGuestSignalCompletedSubmission();
++  while (!deferred_guest_signals_.empty() &&
++         deferred_guest_signals_.front().submission <= completed) {
++    const DeferredGuestSignal& signal = deferred_guest_signals_.front();
++    if (signal.is_interrupt) {
++      if (graphics_system_) {
++        graphics_system_->DispatchInterruptCallback(1, signal.value);
++      }
++    } else {
++      memory::store(memory_->TranslatePhysical(signal.address), signal.value);
++    }
++    deferred_guest_signals_.pop_front();
++  }
++}
++
+ bool CommandProcessor::ExecutePacket(memory::RingBuffer* reader) {
++  DeliverDeferredGuestSignals();
+   const uint32_t packet = reader->ReadAndSwap<uint32_t>();
+   const uint32_t packet_type = packet >> 30;
+   if (packet == 0) {
+@@ -1182,9 +1251,7 @@ bool CommandProcessor::ExecutePacketType3_INTERRUPT(memory::RingBuffer* reader,
    uint32_t cpu_mask = reader->ReadAndSwap<uint32_t>();
-+  OnGuestFence();
    for (int n = 0; n < 6; n++) {
      if (cpu_mask & (1 << n)) {
-       if (graphics_system_) {
-@@ -1358,6 +1374,7 @@ bool CommandProcessor::ExecutePacketType3_REG_TO_MEM(memory::RingBuffer* reader,
+-      if (graphics_system_) {
+-        graphics_system_->DispatchInterruptCallback(1, n);
+-      }
++      SignalGuestInterrupt(uint32_t(n));
+     }
+   }
+   return true;
+@@ -1294,6 +1361,8 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(memory::RingBuffer* reade
+         break;
+     }
+     if (!matched) {
++      // The guest may be waiting for a signal held for the host GPU.
++      DeliverDeferredGuestSignals();
+       // Wait.
+       if (wait >= 0x100) {
+         PrepareForWait();
+@@ -1358,7 +1427,7 @@ bool CommandProcessor::ExecutePacketType3_REG_TO_MEM(memory::RingBuffer* reader,
    auto endianness = static_cast<xenos::Endian>(mem_addr & 0x3);
    mem_addr &= ~0x3;
    reg_val = GpuSwap(reg_val, endianness);
-+  OnGuestFence();
-   memory::store(memory_->TranslatePhysical(mem_addr), reg_val);
+-  memory::store(memory_->TranslatePhysical(mem_addr), reg_val);
++  SignalGuestMemory(mem_addr, reg_val);
  
    return true;
-@@ -1366,6 +1383,7 @@ bool CommandProcessor::ExecutePacketType3_REG_TO_MEM(memory::RingBuffer* reader,
- bool CommandProcessor::ExecutePacketType3_MEM_WRITE(memory::RingBuffer* reader, uint32_t packet,
-                                                     uint32_t count) {
-   uint32_t write_addr = reader->ReadAndSwap<uint32_t>();
-+  OnGuestFence();
-   for (uint32_t i = 0; i < count - 1; i++) {
-     uint32_t write_data = reader->ReadAndSwap<uint32_t>();
+ }
+@@ -1372,7 +1441,7 @@ bool CommandProcessor::ExecutePacketType3_MEM_WRITE(memory::RingBuffer* reader,
+     auto endianness = static_cast<xenos::Endian>(write_addr & 0x3);
+     auto addr = write_addr & ~0x3;
+     write_data = GpuSwap(write_data, endianness);
+-    memory::store(memory_->TranslatePhysical(addr), write_data);
++    SignalGuestMemory(addr, write_data);
+     write_addr += 4;
+   }
  
-@@ -1430,6 +1448,7 @@ bool CommandProcessor::ExecutePacketType3_COND_WRITE(memory::RingBuffer* reader,
-     // Write.
-     if (wait_info & 0x100) {
-       // Memory.
-+      OnGuestFence();
+@@ -1433,7 +1502,7 @@ bool CommandProcessor::ExecutePacketType3_COND_WRITE(memory::RingBuffer* reader,
        auto endianness = static_cast<xenos::Endian>(write_reg_addr & 0x3);
        write_reg_addr &= ~0x3;
        write_data = GpuSwap(write_data, endianness);
-@@ -1478,6 +1497,7 @@ bool CommandProcessor::ExecutePacketType3_EVENT_WRITE_SHD(memory::RingBuffer* re
+-      memory::store(memory_->TranslatePhysical(write_reg_addr), write_data);
++      SignalGuestMemory(write_reg_addr, write_data);
+     } else {
+       // Register.
+       WriteRegister(write_reg_addr, write_data);
+@@ -1478,7 +1547,7 @@ bool CommandProcessor::ExecutePacketType3_EVENT_WRITE_SHD(memory::RingBuffer* re
    auto endianness = static_cast<xenos::Endian>(address & 0x3);
    address &= ~0x3;
    data_value = GpuSwap(data_value, endianness);
-+  OnGuestFence();
-   memory::store(memory_->TranslatePhysical(address), data_value);
+-  memory::store(memory_->TranslatePhysical(address), data_value);
++  SignalGuestMemory(address, data_value);
    return true;
  }
+ 
 diff --git a/src/graphics/flags.cpp b/src/graphics/flags.cpp
 index e405512..ab66f17 100644
 --- a/src/graphics/flags.cpp
@@ -1265,7 +1374,7 @@ index 27811a6..d2f33cb 100644
      // invalidated - if no GPU-written data nearby that was not intended to be
      // invalidated since it's not in sync with CPU memory and can't be
 diff --git a/src/graphics/vulkan/command_processor.cpp b/src/graphics/vulkan/command_processor.cpp
-index 44aa9e2..3dc08eb 100644
+index 44aa9e2..1324661 100644
 --- a/src/graphics/vulkan/command_processor.cpp
 +++ b/src/graphics/vulkan/command_processor.cpp
 @@ -12,12 +12,22 @@
@@ -2023,7 +2132,7 @@ index 44aa9e2..3dc08eb 100644
      deferred_command_buffer_.CmdVkCopyBuffer(shared_memory_->buffer(),
                                               readback.buffers[write_index], 1, &readback_region);
      readback_offset += memexport_range.size_bytes;
-@@ -4733,15 +5249,61 @@ bool VulkanCommandProcessor::IssueCopy() {
+@@ -4733,15 +5249,68 @@ bool VulkanCommandProcessor::IssueCopy() {
    }
  
    ReadbackResolveMode readback_mode = GetReadbackResolveMode(REXCVAR_GET(vulkan_readback_resolve));
@@ -2044,9 +2153,11 @@ index 44aa9e2..3dc08eb 100644
 +    // the command is processed. Halo 3 reads a small luminance resolve on the
 +    // CPU for its exposure; reading it before the GPU wrote it flashed the
 +    // whole frame. After resolves up to AUTOPORT_RESOLVE_SYNC_MAX_BYTES (64 KB
-+    // by default on macOS, 0 turns it off), the next guest fence waits for the
-+    // GPU (OnGuestFence), like the 360's in-order GPU. Waiting right after the
-+    // resolve instead idled the GPU mid-frame, and Apple GPUs then clock down.
++    // by default on macOS, 0 turns it off), the guest's next signals from the
++    // command stream are held until the GPU has run the resolve
++    // (GetGuestFenceSubmission), like on the 360, where the GPU writes them.
++    // Waiting for the GPU here instead idled it mid-frame (Apple GPUs then
++    // clock down): 27.5 -> 14.4 fps.
 +    static const uint32_t resolve_sync_max_bytes = [] {
 +      const char* value = std::getenv("AUTOPORT_RESOLVE_SYNC_MAX_BYTES");
 +      return value ? uint32_t(std::strtoul(value, nullptr, 0))
@@ -2077,18 +2188,23 @@ index 44aa9e2..3dc08eb 100644
    return IssueCopy_ReadbackResolvePath();
  }
  
-+void VulkanCommandProcessor::OnGuestFence() {
++uint64_t VulkanCommandProcessor::GetGuestFenceSubmission() {
 +  if (!resolve_sync_pending_) {
-+    return;
++    return 0;
 +  }
 +  resolve_sync_pending_ = false;
-+  AwaitAllQueueOperationsCompletion();
++  // Submit the resolve so the GPU runs it while commands keep coming; the
++  // signal reaches the guest once this submission completes.
++  if (submission_open_) {
++    EndSubmission(false);
++  }
++  return GetCurrentSubmission() - 1;
 +}
 +
  bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
    const ui::vulkan::VulkanDevice* const vulkan_device = GetVulkanDevice();
    const ui::vulkan::VulkanDevice::Functions& dfn = vulkan_device->functions();
-@@ -4973,6 +5535,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
+@@ -4973,6 +5542,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
      deferred_command_buffer_.CmdVkBindDescriptorSets(VK_PIPELINE_BIND_POINT_COMPUTE,
                                                       resolve_downscale_pipeline_layout_, 0, 1,
                                                       &descriptor_set, 0, nullptr);
@@ -2096,7 +2212,7 @@ index 44aa9e2..3dc08eb 100644
      deferred_command_buffer_.CmdVkDispatch(tile_count, 1, 1);
  
      VkBufferMemoryBarrier downscale_barrier = {};
-@@ -4992,6 +5555,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
+@@ -4992,6 +5562,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
      readback_region.srcOffset = 0;
      readback_region.dstOffset = 0;
      readback_region.size = written_length;
@@ -2104,7 +2220,7 @@ index 44aa9e2..3dc08eb 100644
      deferred_command_buffer_.CmdVkCopyBuffer(resolve_downscale_buffer_,
                                               readback.buffers[write_index], 1, &readback_region);
    } else {
-@@ -5002,6 +5566,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
+@@ -5002,6 +5573,7 @@ bool VulkanCommandProcessor::IssueCopy_ReadbackResolvePath() {
      readback_region.srcOffset = written_address;
      readback_region.dstOffset = 0;
      readback_region.size = written_length;
@@ -2112,7 +2228,7 @@ index 44aa9e2..3dc08eb 100644
      deferred_command_buffer_.CmdVkCopyBuffer(shared_memory_->buffer(),
                                               readback.buffers[write_index], 1, &readback_region);
    }
-@@ -5779,6 +6344,7 @@ bool VulkanCommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -5779,6 +6351,7 @@ bool VulkanCommandProcessor::BeginSubmission(bool is_guest_command) {
      // the end of the submission (when async pipeline object creation requests
      // are fulfilled).
      deferred_command_buffer_.Reset();
@@ -2120,7 +2236,7 @@ index 44aa9e2..3dc08eb 100644
  
      // Reset cached state of the command buffer.
      dynamic_viewport_update_needed_ = true;
-@@ -6001,6 +6567,7 @@ bool VulkanCommandProcessor::EndSubmission(bool is_swap) {
+@@ -6001,6 +6574,7 @@ bool VulkanCommandProcessor::EndSubmission(bool is_swap) {
      CloseQuerySegment();
  
      SubmitBarriers(true);
@@ -2128,7 +2244,7 @@ index 44aa9e2..3dc08eb 100644
  
      assert_false(command_buffers_writable_.empty());
      CommandBuffer command_buffer = command_buffers_writable_.back();
-@@ -6059,6 +6626,7 @@ bool VulkanCommandProcessor::EndSubmission(bool is_swap) {
+@@ -6059,6 +6633,7 @@ bool VulkanCommandProcessor::EndSubmission(bool is_swap) {
      current_submission_wait_semaphores_.clear();
      command_buffers_submitted_.emplace_back(submission_index, command_buffer);
      command_buffers_writable_.pop_back();
@@ -2136,7 +2252,7 @@ index 44aa9e2..3dc08eb 100644
  
      submission_open_ = false;
  
-@@ -6348,6 +6916,31 @@ void VulkanCommandProcessor::UpdateDynamicState(const draw_util::ViewportInfo& v
+@@ -6348,6 +6923,31 @@ void VulkanCommandProcessor::UpdateDynamicState(const draw_util::ViewportInfo& v
                                   float(std::max(render_target_cache_->draw_resolution_scale_x(),
                                                  render_target_cache_->draw_resolution_scale_y()));
      }
@@ -2168,7 +2284,7 @@ index 44aa9e2..3dc08eb 100644
      // std::memcmp instead of != so in case of NaN, every draw won't be
      // invalidating it.
      dynamic_depth_bias_update_needed_ |=
-@@ -6533,6 +7126,7 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6533,6 +7133,7 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
    // flow.
    reg::RB_COLOR_INFO color_infos[xenos::kMaxColorRenderTargets];
    float rt_clamp[4][4];
@@ -2176,7 +2292,7 @@ index 44aa9e2..3dc08eb 100644
    // Two UINT32_MAX if no components actually existing in the RT are written.
    uint32_t rt_keep_masks[4][2];
    for (uint32_t i = 0; i < xenos::kMaxColorRenderTargets; ++i) {
-@@ -6542,6 +7136,26 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6542,6 +7143,26 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
        RenderTargetCache::GetPSIColorFormatInfo(
            color_info.color_format, (normalized_color_mask >> (i * 4)) & 0b1111, rt_clamp[i][0],
            rt_clamp[i][1], rt_clamp[i][2], rt_clamp[i][3], rt_keep_masks[i][0], rt_keep_masks[i][1]);
@@ -2203,7 +2319,7 @@ index 44aa9e2..3dc08eb 100644
      }
    }
  
-@@ -6645,6 +7259,21 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6645,6 +7266,21 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
    xenos::CompareFunction alpha_test_function = rb_colorcontrol.alpha_test_enable
                                                     ? rb_colorcontrol.alpha_func
                                                     : xenos::CompareFunction::kAlways;
@@ -2225,7 +2341,7 @@ index 44aa9e2..3dc08eb 100644
    flags |= uint32_t(alpha_test_function) << SpirvShaderTranslator::kSysFlag_AlphaPassIfLess_Shift;
    // Gamma writing.
    // Gamma targets stored as UNORM16 hold linear values for blending, and
-@@ -6836,6 +7465,20 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6836,6 +7472,20 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
        uint32_t& texture_signs_uint = system_constants_.texture_swizzled_signs[texture_index >> 2];
        uint32_t texture_signs_shift = 8 * (texture_index & 3);
        uint8_t texture_signs = texture_cache_->GetActiveTextureSwizzledSigns(texture_index);
@@ -2246,7 +2362,7 @@ index 44aa9e2..3dc08eb 100644
        uint32_t texture_signs_shifted = uint32_t(texture_signs) << texture_signs_shift;
        uint32_t texture_signs_mask = ((UINT32_C(1) << 8) - 1) << texture_signs_shift;
        dirty |= (texture_signs_uint & texture_signs_mask) != texture_signs_shifted;
-@@ -6884,6 +7527,40 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6884,6 +7534,40 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
    }
  
    // Alpha test.
@@ -2287,7 +2403,7 @@ index 44aa9e2..3dc08eb 100644
    dirty |= system_constants_.alpha_test_reference != rb_alpha_ref;
    system_constants_.alpha_test_reference = rb_alpha_ref;
    uint32_t alpha_to_mask =
-@@ -6939,6 +7616,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
+@@ -6939,6 +7623,11 @@ void VulkanCommandProcessor::UpdateSystemConstantValues(
          UINT32_C(0x3F800000) + (color_exp_bias << 23);
      dirty |= system_constants_.color_exp_bias[i] != color_exp_bias_scale;
      system_constants_.color_exp_bias[i] = color_exp_bias_scale;
