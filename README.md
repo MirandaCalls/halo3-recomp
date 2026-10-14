@@ -228,7 +228,7 @@ What differs from the Linux path:
   (ending the pass), to tell translation problems from ordering problems;
   `=emptypass` only moves them in front of a pass with no draws yet.
   `AUTOPORT_MEMEXPORT_COMPUTE_LOG=1` logs, for the first 40 passes with
-  dispatches moved past draws, the pass's draws (shaders, memory read and
+  dispatches moved past draws and a tessellated draw (water), the pass's draws (shaders, memory read and
   written) and the moved dispatches in order.
   `AUTOPORT_MEMEXPORT_COMPUTE_SKIP=<hash>[,<hash>...]` keeps those vertex
   shaders on the drawing path, to find one that computes differently (the log
