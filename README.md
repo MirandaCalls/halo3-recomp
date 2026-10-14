@@ -154,11 +154,15 @@ What differs from the Linux path:
   host GPU runs it, while the guest's fences are signaled when the command is
   processed, so the CPU can read a resolve before it's written (or after a
   later resolve reused the memory). Halo 3 reads a small luminance resolve for
-  its exposure, and the whole frame flashed when plasma hit the player. The
-  emulator now waits for the GPU after resolves up to
-  `AUTOPORT_RESOLVE_SYNC_MAX_BYTES` (64 KB by default on macOS; `0` turns it
-  off). The log lists each distinct resolve once ("autoport: resolve to ...",
-  with ", waiting for the GPU" on the ones it waits for).
+  its exposure, and the whole frame flashed when plasma hit the player. After
+  resolves up to `AUTOPORT_RESOLVE_SYNC_MAX_BYTES` (64 KB by default on macOS;
+  `0` turns it off), the next guest fence (memory write, event write or
+  interrupt in the command stream) now waits for the GPU first.
+  `AUTOPORT_RESOLVE_SYNC=immediate` waits right after the resolve instead, which
+  also stopped the flashes but took Halo 3 from 27.5 to 14.4 fps: the GPU idles
+  mid-frame and Apple GPUs then clock down. The log lists each distinct resolve
+  once ("autoport: resolve to ...", with ", waiting for the GPU" on the ones
+  that get a wait).
 - If the import fails (the log lacks "Shared memory: using guest physical
   memory directly"), the normal buffer is used, and `play-halo3.sh`'s default
   `--readback_resolve=fast` keeps the lighting right. Without either, the
