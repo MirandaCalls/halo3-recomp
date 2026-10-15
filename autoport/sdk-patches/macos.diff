@@ -4661,30 +4661,6 @@ index b94fe9e..a712cc2 100644
      }
    });
    window_->Open();
-diff --git a/src/ui/vulkan/vulkan_presenter.cpp b/src/ui/vulkan/vulkan_presenter.cpp
-index 09879c0..cdd3284 100644
---- a/src/ui/vulkan/vulkan_presenter.cpp
-+++ b/src/ui/vulkan/vulkan_presenter.cpp
-@@ -49,13 +49,17 @@
- REXCVAR_DEFINE_BOOL(present_render_pass_clear, true, "UI/Presenter",
-                     "Clear render pass during presentation");
- 
--REXCVAR_DEFINE_BOOL(vulkan_allow_present_mode_immediate, true, "UI/Vulkan",
-+// autoport: off by default on macOS, where immediate presentation tears (the
-+// game paces itself at 30 fps, so vsync costs little).
-+REXCVAR_DEFINE_BOOL(vulkan_allow_present_mode_immediate, !REX_PLATFORM_MAC, "UI/Vulkan",
-                     "Allow immediate present mode (no vsync)");
- 
- REXCVAR_DEFINE_BOOL(vulkan_allow_present_mode_mailbox, true, "UI/Vulkan",
-                     "Allow mailbox present mode (triple buffering)");
- 
--REXCVAR_DEFINE_BOOL(vulkan_allow_present_mode_fifo_relaxed, true, "UI/Vulkan",
-+// autoport: off by default on macOS too: FIFO relaxed tears whenever a frame
-+// is late.
-+REXCVAR_DEFINE_BOOL(vulkan_allow_present_mode_fifo_relaxed, !REX_PLATFORM_MAC, "UI/Vulkan",
-                     "Allow FIFO relaxed present mode");
- 
- namespace rex {
 diff --git a/src/ui/windowed_app_context_sdl.cpp b/src/ui/windowed_app_context_sdl.cpp
 index dc0b4c2..419b617 100644
 --- a/src/ui/windowed_app_context_sdl.cpp

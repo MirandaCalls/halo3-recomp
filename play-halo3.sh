@@ -7,7 +7,8 @@
 #   --keyboard     play with keyboard and mouse (SDK mnk_mode, mouse look)
 #   --fps          print the guest frame rate every 5 s (no effect yet: nothing reads
 #                  AUTOPORT_FPS; use AUTOPORT_STUTTER_LOG + tools/stutter-summary.awk)
-#   --novsync      present without vsync (immediate mode: lower latency, but tears)
+#   --vsync        present with vsync: no tearing, but noticeably more input lag
+#   --novsync      present without vsync (the default: immediate mode, can tear)
 #   --metal-capture  macOS: `touch metal-captures/capture` while playing saves the
 #                  next 3 frames as metal-captures/frame-<n>.gputrace (open in Xcode)
 #   --scale N      render at N x N internal resolution (Halo 3 is 1152x640)
@@ -90,6 +91,7 @@ while [ $# -gt 0 ]; do
       extra+=(--net_ip="$explicit_ip")
       ;;
     --novsync) extra+=(--vulkan_allow_present_mode_immediate=true --vulkan_allow_present_mode_mailbox=true) ;;
+    --vsync) extra+=(--vulkan_allow_present_mode_immediate=false --vulkan_allow_present_mode_mailbox=false --vulkan_allow_present_mode_fifo_relaxed=false) ;;
     --scale)
       shift
       extra+=(--draw_resolution_scale_x="$1" --draw_resolution_scale_y="$1")

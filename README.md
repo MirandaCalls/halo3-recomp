@@ -311,8 +311,9 @@ What differs from the Linux path:
   Space the game kept running (audio, input) on a black screen, whether started
   with `--fullscreen` or entered from a window. `SDL_VIDEO_MAC_FULLSCREEN_SPACES=1`
   brings Spaces back.
-- Presentation uses vsync (FIFO) on macOS: the SDK's default immediate mode
-  tore. `./play-halo3.sh --novsync` brings immediate mode back.
+- Presentation is immediate (no vsync) by default, which can tear;
+  `./play-halo3.sh --vsync` presents with vsync (FIFO) instead, which removes
+  the tearing but added noticeable input lag on an M3 MacBook Air.
 - `AUTOPORT_TEXTURE_SANITIZE=1` replaces infinite texture fetch results with
   ±65504 and NaN with 0. Xenos 16-bit floats have no infinity or NaN (exponent
   31 holds 65536 to 131008), but 16-bit float textures are copied to the host
