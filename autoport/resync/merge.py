@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Three-way merge Xenia Canary GPU changes into ReXGlue.
 
-For each manifest entry (see map_bases.py):
+For each entry of manifest.json (produced by upstream's map_bases.py, removed here):
   ours   = ReXGlue file
   base   = Canary file at the per-file base revision, translated to ReXGlue dialect
   theirs = Canary file at HEAD, translated the same way
