@@ -33,11 +33,26 @@ State of the macOS build on an M3 MacBook Air: about 29 fps on average, mostly
 29–30 in combat (the game caps at 30), with no shader-compile hitches after a
 first visit. Remaining work, roughly by priority:
 
-- [ ] **Vsync.** `--vsync` (FIFO presentation) removes tearing but lowers the
-  frame rate and adds input lag: frames are presented from the GPU command
-  thread, which blocks until the display frees a swapchain image. Needs
-  presentation moved off that thread (or a two-image swapchain). Without it,
-  the default immediate presentation can tear.
+- [ ] **Vsync — fix awaiting a test.** `--vsync` (FIFO presentation) removed
+  tearing but lowered the frame rate and added lag. Cause: MoltenVK fetches
+  the frame's `CAMetalDrawable` lazily, inside `vkQueueSubmit`, and with
+  display sync `nextDrawable` blocks for up to a refresh while the presenter
+  holds the shared queue lock, so the game's GPU command thread couldn't
+  submit. `autoport/sdk-patches/moltenvk.diff` fetches the drawable in
+  `vkAcquireNextImageKHR` instead, outside the lock. If `--vsync` now holds
+  the same frame rate as the default, make it the default. If lag remains, the
+  next step is a two-image swapchain under FIFO.
+- [ ] **First-encounter pipeline compiles — pop-in instead of freezes,
+  awaiting a test.** New pipelines are created on background threads. Two
+  things used to freeze the screen for seconds when new areas or enemies
+  appeared: the GPU thread built a placeholder pipeline for each new one, a
+  full synchronous vertex shader compile, and every frame using a placeholder
+  went unpresented. Now no placeholder is built: the draw is skipped until its
+  pipeline is ready, depth-only draws included
+  (`--vulkan_async_depth_only_pipelines`, on by default on macOS). Frames are
+  presented anyway (`--vulkan_async_skip_incomplete_frames`, now off by default
+  on macOS), so objects pop in briefly. Long term, a pre-built pipeline list
+  shipped with the port would remove even the pop-in.
 - [ ] **Native fullscreen Spaces show black** (audio and input keep running).
   Worked around by fullscreen without a separate Space (the default now; the
   green button and Ctrl+Cmd+F may zoom instead of going fullscreen). The cause
@@ -262,7 +277,8 @@ What differs from the Linux path:
   brings Spaces back.
 - Presentation is immediate (no vsync) by default, which can tear;
   `./play-halo3.sh --vsync` presents with vsync (FIFO) instead, which removes
-  the tearing but added noticeable input lag on an M3 MacBook Air.
+  the tearing. It cost frame rate and added lag on an M3 MacBook Air until
+  MoltenVK was patched to fetch drawables at acquire (see the known issues).
 - `AUTOPORT_TEXTURE_SANITIZE=1` replaces infinite texture fetch results with
   ±65504 and NaN with 0. Xenos 16-bit floats have no infinity or NaN (exponent
   31 holds 65536 to 131008), but 16-bit float textures are copied to the host

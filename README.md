@@ -58,8 +58,8 @@ join. While a game is running, `tools/zt-probe.py` lists every Halo 3 it can
 see on the ZeroTier link (they all answer the probe on UDP 37023).
 
 Useful launcher flags: `--fullscreen` (the cursor auto-hides), `--keyboard`
-(keyboard and mouse), `--vsync` (no tearing, but costs frame rate; see the
-known issues), `--instance N` (several instances on one Mac), `--ip ADDR`
+(keyboard and mouse), `--vsync` (no tearing; being tested, see the known
+issues), `--instance N` (several instances on one Mac), `--ip ADDR`
 (pick the system-link interface), `--scale N`, `--help`.
 
 If the game aborts with "Call to invalid or unregistered function" somewhere the
