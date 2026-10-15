@@ -7,7 +7,7 @@
 #   --keyboard     play with keyboard and mouse (SDK mnk_mode, mouse look)
 #   --fps          print the guest frame rate every 5 s (no effect yet: nothing reads
 #                  AUTOPORT_FPS; use AUTOPORT_STUTTER_LOG + tools/stutter-summary.awk)
-#   --vsync        present with vsync: no tearing, but noticeably more input lag
+#   --vsync        present with vsync (FIFO): no tearing
 #   --novsync      present without vsync (the default: immediate mode, can tear)
 #   --metal-capture  macOS: `touch metal-captures/capture` while playing saves the
 #                  next 3 frames as metal-captures/frame-<n>.gputrace (open in Xcode)

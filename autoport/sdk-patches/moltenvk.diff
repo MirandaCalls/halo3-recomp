@@ -1,0 +1,18 @@
+diff --git a/MoltenVK/MoltenVK/GPUObjects/MVKSwapchain.mm b/MoltenVK/MoltenVK/GPUObjects/MVKSwapchain.mm
+index 0af2bd4..7f64ecc 100644
+--- a/MoltenVK/MoltenVK/GPUObjects/MVKSwapchain.mm
++++ b/MoltenVK/MoltenVK/GPUObjects/MVKSwapchain.mm
+@@ -100,6 +100,13 @@ VkResult MVKSwapchain::acquireNextImage(uint64_t timeout,
+ 	// and signal the semaphore and fence when it's available
+ 	*pImageIndex = minWaitImage->_swapchainIndex;
+ 	VkResult rslt = minWaitImage->acquireAndSignalWhenAvailable((MVKSemaphore*)semaphore, (MVKFence*)fence);
++	// autoport: retrieve the CAMetalDrawable now, in the thread acquiring the
++	// image. Otherwise it's retrieved lazily when a command buffer rendering to
++	// the image is encoded, inside vkQueueSubmit, where with display sync (FIFO)
++	// -[CAMetalLayer nextDrawable] can block for up to a refresh while the app
++	// holds its queue lock, stalling every other thread submitting to that queue
++	// (the game's GPU command thread, when presenting from the UI thread).
++	if ( !rslt ) { minWaitImage->getCAMetalDrawable(); }
+ 	return rslt ? rslt : getSurfaceStatus();
+ }
+ 
