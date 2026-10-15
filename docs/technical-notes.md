@@ -9,10 +9,11 @@ measure GPU time, and what's left to do. For installing and playing, see the
 The project started as a Linux port, and the same scripts still build it
 there: on Linux x86-64 (developed on Fedora 44) with a Vulkan-capable GPU,
 `podman`, `git` and `python3`, `./setup-halo3.sh` builds inside the
-`docker/Containerfile` container and `./play-halo3.sh` runs the result.
-`--native` selects the experimental native renderer in `xenon-gpu/`. Most
+`docker/Containerfile` container and `./play-halo3.sh` runs the result. Most
 of the recent rendering and performance work is macOS-only by default and
-hasn't been retested on Linux.
+hasn't been retested on Linux. (Upstream's experimental native renderer,
+`xenon-gpu/` and `--native`, has been removed; its shader tools live on in
+`tools/shaders/`.)
 
 ## What's in this repository
 
@@ -23,7 +24,7 @@ hasn't been retested on Linux.
 | `autoport/sdk-patches/halo3-system-link.diff` | Everything changed in ReXGlue: Canary GPU re-sync, Halo 3 fixes, system link |
 | `play-halo3.sh` | Launcher |
 | `tools/zt-probe.py` | Find running Halo 3s on the ZeroTier/LAN link |
-| `xenon-gpu/` | Experimental native renderer (`--native`); optional |
+| `tools/shaders/` | Shader corpus tools: extract or scan shaders from game files, read and write shader storage (`.xsh`), translate ahead of time |
 | `docker/Containerfile` | Build container (clang, GTK3, shader tools) |
 
 ## Known issues and next steps

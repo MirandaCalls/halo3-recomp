@@ -7,7 +7,7 @@
 // CSV index of where each one was found.
 //
 // Usage: xgpu-shader-scan --out corpus.xsh --index corpus.csv FILE...
-#include <xgpu/ucode.h>
+#include "ucode.h"
 
 #define XXH_INLINE_ALL
 #include <xxhash.h>
