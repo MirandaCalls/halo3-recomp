@@ -1,32 +1,26 @@
-# halo3-recomp
+# reclaimed-ring
 
-A native Linux and macOS port of Halo 3. It recompiles your own Halo 3 (Xbox 360)
-disc image into a native binary and plays it with working **system link (LAN)
-multiplayer**, including between machines that only share a **ZeroTier**
-network.
+A native macOS port of Halo 3, which also still builds and runs on Linux. It
+recompiles your own Halo 3 (Xbox 360) disc image into a native binary and plays
+it, including working **system link (LAN) multiplayer**, even between machines
+that only share a **ZeroTier** network.
 
-This project is a fork of
+reclaimed-ring started as a fork of
 [summers-aaron/xenon-pc-comp](https://github.com/summers-aaron/xenon-pc-comp),
-which built Halo 3 for Linux. This fork adds the macOS port (Apple Silicon,
-through MoltenVK) along with the rendering fixes and performance work it
-needed. Most of those changes are macOS-only defaults; the renderer fixes
-that apply everywhere (tessellation, memexport barriers) haven't been
-retested on Linux yet.
+a Linux port, and is now macOS-first: it adds the macOS port (Apple Silicon,
+through MoltenVK) and the rendering fixes and performance work it needed.
+Linux keeps building as before, but most of the recent work has only been
+tested on macOS.
 
 Built on [ReXGlue](https://github.com/rexglue/rexglue-sdk), the open-source
-Xbox 360 static-recompilation toolchain. This repository is the whole recipe:
-the ISO → native pipeline (`autoport/`), the ReXGlue changes that make Halo 3
-(and specifically system link) work on Linux and macOS, and the launcher.
+Xbox 360 static-recompilation toolchain.
+
+**Status:** the campaign renders correctly and system link works. On an M3
+MacBook Air it runs at about 29 fps on average, mostly 29–30 in combat (the
+game caps at 30). See [known issues](docs/technical-notes.md#known-issues-and-next-steps)
+for what's left.
 
 ## Requirements
-
-### Linux
-
-- Linux x86-64 (developed on Fedora 44), a Vulkan-capable GPU
-- `podman`, `git`, `python3`
-- ~40 GB free disk
-- Your own Halo 3 disc image (ISO); it stays on your machine
-- For internet play: both machines on the same ZeroTier network
 
 ### macOS
 
@@ -40,14 +34,21 @@ the ISO → native pipeline (`autoport/`), the ReXGlue changes that make Halo 3
 
 On macOS everything builds natively with Xcode's clang instead of in the
 container; Vulkan runs through MoltenVK, which the SDK bundles. The same
-`./setup-halo3.sh` and `./play-halo3.sh` commands work. See "macOS port notes"
-below for what differs and the switches for diagnosing rendering issues.
+`./setup-halo3.sh` and `./play-halo3.sh` commands work.
+
+### Linux
+
+- Linux x86-64 (developed on Fedora 44), a Vulkan-capable GPU
+- `podman`, `git`, `python3`
+- ~40 GB free disk
+- Your own Halo 3 disc image (ISO); it stays on your machine
+- For internet play: both machines on the same ZeroTier network
 
 ## Build
 
 ```bash
-git clone https://github.com/MirandaCalls/halo3-recomp.git
-cd halo3-recomp
+git clone https://github.com/MirandaCalls/reclaimed-ring-macos.git
+cd reclaimed-ring-macos
 ./setup-halo3.sh "/path/to/Halo 3.iso"
 ```
 
@@ -70,7 +71,7 @@ join. While a game is running, `tools/zt-probe.py` lists every Halo 3 it can
 see on the ZeroTier link (they all answer the probe on UDP 37023).
 
 Useful launcher flags: `--fullscreen` (the cursor auto-hides), `--keyboard`
-(keyboard and mouse), `--vsync` (no tearing, but costs frame rate, see below),
+(keyboard and mouse), `--vsync` (no tearing, but costs frame rate; see the known issues),
 `--instance N` (several instances on one PC), `--ip ADDR` (pick the
 system-link interface), `--native` (experimental native renderer), `--fps`,
 `--scale N`, `--help`.
@@ -86,50 +87,6 @@ tools/add-missed-functions.sh halo3.log
 
 Repeat until it gets past that point; each crash names one more function.
 
-## Known issues and next steps
-
-State of the macOS build on an M3 MacBook Air: about 29 fps on average, mostly
-29–30 in combat (the game caps at 30), with no shader-compile hitches after a
-first visit. Remaining work, roughly by priority:
-
-- [ ] **Vsync.** `--vsync` (FIFO presentation) removes tearing but lowers the
-  frame rate and adds input lag: frames are presented from the GPU command
-  thread, which blocks until the display frees a swapchain image. Needs
-  presentation moved off that thread (or a two-image swapchain). Without it,
-  the default immediate presentation can tear.
-- [ ] **Native fullscreen Spaces show black** (audio and input keep running).
-  Worked around by fullscreen without a separate Space (the default now; the
-  green button and Ctrl+Cmd+F may zoom instead of going fullscreen). The cause
-  inside the Space is unknown.
-- [ ] **Broad testing.** Most measurements and checks were on Sierra 117. Play
-  other levels and note visual bugs (particles, muzzle flashes, water, bloom,
-  textures) and spots well under 30 fps.
-- [ ] **Water briefly broken when approaching it** — seen once, in a run with
-  per-dispatch GPU timing on; not yet seen in normal play. Confirm or close.
-- [ ] **Single-pixel dots on foliage** were reduced but possibly not gone
-  entirely; re-check.
-- [ ] **Particle updates cost ~5 ms of GPU per frame.** A few update shaders
-  (`F1D589E8…`, `F90A6049…`) run long loops on ~10 threads. Concurrent dispatch
-  (MoltenVK patch) and plain IEEE multiplies were tried and gained nothing; the
-  remaining lever is cheaper translated control flow.
-- [ ] **EDRAM transfers, resolves and texture loads cost ~5 ms per frame**,
-  spread over ~85 small operations each needing a GPU sync. Batching was
-  measured as not worth it (most are alone between draws); the structural fix
-  is resolving straight into the textures the game samples.
-- [ ] **GPU idle around the resolve sync** (the readback that fixed the plasma
-  flashes): a few ms per frame in heavy scenes while the game reacts to it.
-- [ ] **Thermal throttling** on fanless Macs: long sessions slow the GPU by up
-  to ~1.5–2×; less GPU work per frame is the only remedy.
-- [ ] **Water tessellation** costs ~3 ms per water draw (MoltenVK emulates
-  tessellation with compute); a quality switch capping its factors is an option.
-- [ ] **Rendering above 1x (`--scale 2`)**: the resolve-downscale pipeline was
-  fixed but never tested in game.
-- [ ] **60 fps** would need Halo 3's 30 fps cap lifted and the GPU work per
-  frame roughly halved.
-- [ ] Clean up: `AUTOPORT_IMPLICIT_LOD` measured no gain and could go; the log's
-  "Couldn't extract memexport stream constant index" errors are harmless noise
-  from Halo 3's shaders.
-
 ## ZeroTier notes
 
 Both machines only need to join the same ZeroTier network — no port
@@ -139,27 +96,6 @@ interface instead of the default route. If a machine's ZeroTier address is
 managed and reachable (`zerotier-cli listnetworks` says `OK`), the games find
 each other.
 
-## What's in here
-
-| Path | What |
-| --- | --- |
-| `setup-halo3.sh` | One-command build: SDK patching + ISO port |
-| `autoport/` | ISO → native pipeline (codegen fixups, runtime hooks, build) |
-| `autoport/sdk-patches/halo3-system-link.diff` | Everything changed in ReXGlue: Canary GPU re-sync, Halo 3 fixes, system link |
-| `play-halo3.sh` | Launcher |
-| `tools/zt-probe.py` | Find running Halo 3s on the ZeroTier/LAN link |
-| `xenon-gpu/` | Experimental native renderer (`--native`); optional |
-| `docker/Containerfile` | Build container (clang, GTK3, shader tools) |
-
-Status: Halo 3 boots to the menu, campaign loads (Arrival → Sierra 117 and
-beyond), and system link multiplayer works between instances/machines. The
-`--native` renderer is experimental; the default emulated Xenos renderer is the
-well-tested path.
-
-On macOS (M3 MacBook Air) the campaign renders correctly, including the
-tessellated water, at roughly 25–30 fps; the frame rate is still being worked
-on (see "Measuring GPU time per render pass").
-
 ## Notes
 
 - Guest ports below 1024 are mapped up by `net_port_offset` (default 36000).
@@ -168,257 +104,12 @@ on (see "Measuring GPU time per render pass").
   cache for system link on a single PC.
 - Kernel/GPU details and the session history are in `autoport/` comments.
 
-## macOS port notes
+## More
 
-What differs from the Linux path:
-
-- `autoport/host.sh` picks per-platform settings: `.dylib`/`lib` instead of
-  `.so`/`lib64`, `DYLD_LIBRARY_PATH`, a native build instead of podman, and the
-  CPU architecture flags.
-- `autoport/sdk-patches/macos.diff` is applied on top of
-  `halo3-system-link.diff`. It replaces the Linux-only `process_vm_readv` (GPU
-  capture memory dump) with `mach_vm_read_overwrite`, makes the native
-  renderer's `--no-undefined` link flag ld64-compatible, and compiles out the
-  RenderDoc frame-capture hooks (`AUTOPORT_RDOC_*`), whose header has no macOS
-  support. It also fixes a race in the SDK's `XThread` startup, where a new thread
-  and its creator could write the thread's name at once and corrupt the heap
-  (macOS aborts with "pointer being freed was not allocated").
-  It turns off 16-bit gamma render targets by default on macOS
-  (`gamma_render_target_as_unorm16`), which cost about 4 ms of GPU time per frame
-  on an M3 with no visible difference. Finally, it adds per-render-pass GPU timing
-  (see below).
-- The runtime fix-up loop (`autoport/runtime_loop.py`) opens a real window on
-  macOS rather than SDL's offscreen driver.
-- On macOS the GPU uses the guest's physical memory directly
-  (`--vulkan_shared_memory_host_import`, on by default there) through
-  `VK_EXT_external_memory_host`, so guest data needs no uploads and GPU writes
-  land in guest memory. Halo 3 sets its exposure from a resolved image it reads
-  on the CPU, and this gives it the current frame's image with no readback.
-  Resolve and memexport readbacks are skipped while it is on, so
-  `--readback_resolve` has no effect. GPU time is the same as without it.
-- With guest memory imported, a resolve only lands in guest memory when the
-  host GPU runs it, while the command stream's signals to the guest (memory
-  and event writes, interrupts) are delivered when the command is processed,
-  so the CPU can read a resolve before it's written. Halo 3 reads a small
-  luminance resolve for its exposure; when the GPU lagged (heavy plasma
-  effects), the whole frame flashed. For resolves up to
-  `AUTOPORT_RESOLVE_SYNC_MAX_BYTES` (64 KB by default on macOS; `0` turns it
-  off), `AUTOPORT_RESOLVE_SYNC` picks what the CPU sees:
-  - `signal` (default): this frame's, by holding the guest's next signals
-    until the GPU has run the resolve, as on the 360. The game then waits for
-    the GPU every frame, which costs while the GPU can't keep up: 25.6 -> 18.7
-    fps at Sierra 117.
-  - `previous`: the previous frame's completed resolve, copied into guest
-    memory when the resolve is processed (the delayed readback that
-    `--readback_resolve=fast` does without import). 27.7 fps, but the flashes
-    stay.
-  - `immediate`: this frame's, by waiting for the GPU right after the resolve.
-    The GPU idles mid-frame and Apple GPUs clock down: 14.4 fps.
-
-  The log lists each distinct resolve once ("autoport: resolve to ...", with
-  ", synchronized for the CPU" on the small ones).
-- If the import fails (the log lacks "Shared memory: using guest physical
-  memory directly"), the normal buffer is used, and `play-halo3.sh`'s default
-  `--readback_resolve=fast` keeps the lighting right. Without either, the
-  campaign renders almost black (the menu looks normal).
-- Vertex shaders mark their position output invariant where SPIRV-Cross reads
-  it (on the `gl_Position` member), so MoltenVK compiles them with Metal's
-  `preserveInvariance`. Halo 3 draws objects twice, the second (lighting) pass
-  with an "equal" depth test; without invariance, the two passes' positions
-  for wind-animated foliage differed slightly on some pixels, which kept the
-  first pass's unlit color (flickering green dots on ferns).
-- `AUTOPORT_DRAW_LOG=<file>` records the state of every draw of two frames
-  once `<file>.trigger` exists; `tools/draw-log-pairs.py <file>` lines up the
-  passes of multipass draws (same index and vertex buffers, different shaders)
-  and marks the state that differs between them:
-
-  ```sh
-  AUTOPORT_DRAW_LOG=$PWD/draws.log ./play-halo3.sh --name <gamertag>
-  touch draws.log.trigger        # while looking at the artifact
-  tools/draw-log-pairs.py draws.log > pairs.txt
-  ```
-- `AUTOPORT_PASS2_DEPTH_BIAS=<units>` biases draws that depth-test without
-  writing depth (Halo 3's lighting pass: "greater or equal" against the albedo
-  pass's depth, with a different vertex shader) toward passing, by that many
-  depth units.
-- `AUTOPORT_PASS2_ALPHA_EPSILON=<e>` lowers the alpha test cutoff by `e` for
-  draws that depth-test against an earlier pass without writing depth (0.35 by
-  default on macOS, `0` turns it off). Halo 3 alpha-tests foliage at 0.502 in
-  both its albedo and lighting passes with the same texture and settings, but on
-  Apple GPUs the lighting pass can pick a smaller mip at leaf edges (forcing the
-  most detailed mip with `AUTOPORT_TEXTURE_LOD0=1` removes the effect), so its
-  alpha drops below the cutoff and the unlit albedo stays: flickering green dots
-  on ferns. The lower cutoff hides most of them; the root cause (how the
-  lighting pass's texture coordinate derivatives come out) is still open.
-- Guest draws track the shared memory ranges they read (vertex and index
-  buffers) and memexport, and only get a barrier when a later draw reads or
-  overwrites memory an earlier one wrote or read since the last barrier. The
-  SDK inserted one after every memexport draw, which ended a render pass each
-  time (~110 per frame in Halo 3). `AUTOPORT_MEMEXPORT_BARRIERS=always` restores
-  that. `AUTOPORT_MEMEXPORT_BARRIERS=never` drops the remaining ones, which
-  each split a render pass, to measure what they cost; draws may then read
-  stale memexported data (particles), so it's a measurement, not a fix. Apple
-  GPUs have no barriers inside a render pass (MoltenVK ignores them there).
-- `AUTOPORT_MEMEXPORT_COMPUTE` (on by default on macOS, where guest memory is
-  imported; `=0` turns it off) runs draws that only memexport from their vertex shader (nothing
-  rasterized) as compute dispatches recorded in front of the render pass
-  that's open, instead of drawing them inside it. Halo 3 updates each particle
-  system with such a draw and then draws the particles from the result, and
-  since Apple GPUs have no barriers inside a render pass, the pass had to end
-  between the two: ~110 times a frame, each storing and reloading the render
-  targets (about 10 ms of GPU time per frame at Sierra 117). With it, Sierra
-  117 went from 34.4 to 28.9 ms of GPU time per frame (27.5 -> 28.6 fps). A dispatch that
-  touches memory the pass's earlier draws access ends the pass instead. Every
-  300 frames the log says how many went in front of a pass, outside one, ended
-  one, or were drawn because the compute pipeline couldn't be created.
-  A vertex shader whose moved dispatch turns out to feed a tessellated draw in
-  the same pass runs in place from then on (logged once): Sierra 117's water
-  computes its tessellation factors this way (`E63384A95752C73D`), and broke
-  when that dispatch was moved past an earlier draw, though nothing tracked
-  overlapped.
-  On macOS no barrier is inserted between the dispatches of a pass: MoltenVK
-  runs them as serial Metal dispatches (each completes before the next starts),
-  and with argument buffers every barrier outside a render pass ends the
-  compute encoder; `AUTOPORT_MEMEXPORT_COMPUTE_BARRIERS=1` inserts them anyway.
-  (Concurrent dispatch, via a MoltenVK patch, was tried: with the barriers it
-  then needed between dependent updates, it gained nothing.)
-  `AUTOPORT_MEMEXPORT_COMPUTE=inplace` runs the dispatches where the draws were
-  (ending the pass), to tell translation problems from ordering problems;
-  `=emptypass` only moves them in front of a pass with no draws yet.
-  `AUTOPORT_MEMEXPORT_COMPUTE_LOG=1` logs, for the first 40 passes with
-  dispatches moved past draws and a tessellated draw (water), the pass's draws (shaders, memory read and
-  written) and the moved dispatches in order.
-  `AUTOPORT_MEMEXPORT_COMPUTE_SKIP=<hash>[,<hash>...]` keeps those vertex
-  shaders on the drawing path, to find one that computes differently (the log
-  names each converted shader: "vertex shader ... memexports from a compute
-  pipeline").
-- `AUTOPORT_TEXTURE_STATS=1` logs, every 300 frames, texture loads per frame
-  (first loads and reloads), how many texture invalidations came from CPU and
-  GPU writes, and the most reloaded textures.
-- On macOS, CPU writes invalidate only the guest pages written, instead of up to
-  64 pages around them (1 MB with macOS's 16 KB pages). At Sierra 117 this took
-  the frame rate from 9.9 to 13.1 fps. `AUTOPORT_INVALIDATION_WIDEN=1` restores
-  the widening (`=0` turns it off on other platforms).
-- `AUTOPORT_TEXTURE_LOD0=1` samples 2D textures with zero gradients, i.e. the
-  most detailed mip (diagnostic; distant textures shimmer).
-- `AUTOPORT_TEXTURE_GAMMA=off` treats gamma texture components as plain
-  (diagnostic; colors wash out).
-- `AUTOPORT_EQUAL_DEPTH=lequal|gequal` relaxes "equal" depth tests, and
-  `AUTOPORT_EQUAL_DEPTH=noalphatest` drops the alpha test of draws with an equal,
-  "less or equal" or "greater or equal" depth test and no depth write (diagnostics for pixels a multipass lighting
-  pass misses).
-- `AUTOPORT_PS_NAN=show` paints pixels whose pixel shader output is NaN or
-  infinite magenta; `AUTOPORT_PS_NAN=zero` replaces those values with 0
-  (diagnostics for single-pixel artifacts).
-- `AUTOPORT_FLOAT_RT_CLAMP` clamps colors written to float render targets on
-  the host render target path, and turns NaN into 0 (Xenos render targets have
-  no NaN). `k_2_10_10_10_FLOAT` targets are clamped to the guest format's range
-  (0 to 31.875, alpha 0 to 1); the host stores them as 16-bit float, which keeps
-  negative and larger values. `k_16_16_FLOAT` and `k_16_16_16_16_FLOAT` targets
-  are clamped to ±65504: Xenos 16-bit floats reach 131008 with no infinity,
-  but host ones overflow to infinity above 65504. Without this, plasma hitting
-  the player (or a Phantom firing) overflows Halo 3's bloom, and the NaN that
-  follows flashes the whole frame purple, blue or rainbow. On by default on
-  macOS; `AUTOPORT_FLOAT_RT_CLAMP=0` turns it off, `=1` turns it on elsewhere.
-- `AUTOPORT_FAST_MATH` drops the "precise" (NoContraction) marking from
-  translated shaders. MoltenVK's SPIRV-Cross turns each precise add or multiply
-  into a call to an `[[clang::optnone]]` helper function in the Metal source,
-  hundreds per shader (190 in Halo 3's motion blur, 633 in its main surface
-  shader, 607 in the particle update run as compute). Only vertex positions
-  need the precision (multipass depth equality), so `compute` (the macOS
-  default) applies it to pixel shaders and memexport compute shaders; `ps`
-  limits it to pixel shaders, `0` keeps every shader precise, and `all` also
-  covers vertex shaders.
-- `AUTOPORT_WAIT_REG_MEM`: when the game's command stream waits on a value
-  that a held guest signal will write (see `AUTOPORT_RESOLVE_SYNC`), macOS
-  waits for that GPU work directly and continues as soon as it's done, instead
-  of sleeping the game's poll interval between checks; other waits sleep at
-  most 1 ms. `AUTOPORT_WAIT_REG_MEM=guest` keeps the game's poll interval.
-- `AUTOPORT_EARLY_SUBMIT_DRAWS=N`: commands reach the GPU only when a
-  submission ends (a swap or a guest fence), so after the game waits on the
-  GPU, the GPU idles while the rest of the frame is recorded. On macOS a
-  resolve, and every 8th draw, also end the submission when the GPU has
-  finished everything submitted and at least N draws (default 16) are waiting;
-  `0` turns it off.
-- `AUTOPORT_VBLANK_ON_DEMAND_MS`: Halo 3 presents on every second 60 Hz
-  vblank, so a frame that misses 33.3 ms waits for the next vblank (50 ms,
-  then 66.7 ms) with the GPU idle. On macOS, once 33 ms have passed since the
-  last swap and the game's command stream is waiting (not on the host GPU),
-  the next vblank is delivered right away instead of at its slot. The vblank
-  rate over time stays 60 Hz and frames on time are unaffected. `0` turns it
-  off; another value changes the threshold in ms.
-- `AUTOPORT_IMPLICIT_LOD=1` (experimental, off by default) samples 2D textures
-  with the host's implicit level of detail plus a bias, as cube maps already
-  are, instead of explicit gradients the shader computes from coarse
-  derivatives. The per-axis gradient biases of the fetch constant become the
-  greater of the two (exact when they're equal, the usual case). Measured on
-  an M3 in per-draw timing: no difference beyond run-to-run noise.
-- Fullscreen on macOS doesn't use a separate Space: in a native fullscreen
-  Space the game kept running (audio, input) on a black screen, whether started
-  with `--fullscreen` or entered from a window. `SDL_VIDEO_MAC_FULLSCREEN_SPACES=1`
-  brings Spaces back.
-- Presentation is immediate (no vsync) by default, which can tear;
-  `./play-halo3.sh --vsync` presents with vsync (FIFO) instead, which removes
-  the tearing but added noticeable input lag on an M3 MacBook Air.
-- `AUTOPORT_TEXTURE_SANITIZE=1` replaces infinite texture fetch results with
-  ±65504 and NaN with 0. Xenos 16-bit floats have no infinity or NaN (exponent
-  31 holds 65536 to 131008), but 16-bit float textures are copied to the host
-  bit for bit, so those values sample as infinity or NaN (a candidate for the
-  frame-wide flashes when plasma hits the player).
-- `AUTOPORT_FLUSH_DENORMALS=1` treats denormal floats as zero where Xenos does:
-  in the "0 × anything = 0" rule of multiplications and dot products, and in
-  the inputs of `rcp`, `rsq` and `log`. Halo 3's tone mapping pass
-  (`373E65D9ADCF4380`) divides by the pixel's brightness, so a denormal there
-  would overflow to infinity instead of giving black.
-- `--zt` finds the ZeroTier address on the `feth*` interfaces macOS uses.
-- `autoport/clean_shm.sh` is skipped (no `/dev/shm` on macOS).
-- MoltenVK has no `VK_EXT_graphics_pipeline_library`, so the patch's pipeline
-  library path is disabled automatically and the standard pipeline path is used.
-
-### Measuring GPU time per render pass
-
-`AUTOPORT_GPU_TIMING_LOG=<file>` writes one line per render pass with its GPU
-time, measured with Vulkan timestamp queries and read back without stalling. Each
-line records the pass's kind (the game's draws, an EDRAM transfer between render
-targets, or the copy to the window), its size, its guest draw count and its render
-target formats, plus the GPU time since the previous pass and what was recorded
-in that gap (texture loads, resolves, uploads, barriers and so on).
-`tools/gpu-timing-summary.awk` ranks the passes and the gaps by GPU time per
-frame:
-
-```sh
-AUTOPORT_GPU_TIMING_LOG=$PWD/gpu-timing.log ./play-halo3.sh --name <gamertag>
-awk -v from=25 -f tools/gpu-timing-summary.awk gpu-timing.log   # skip the boot logos
-```
-
-Adding `AUTOPORT_GPU_TIMING_PER_DRAW=1` gives every guest draw its own render pass
-and labels it with its vertex and pixel shader hashes (as in `--dump_shaders` file
-names), and the summary then ranks pixel shaders by GPU time. The extra passes
-inflate the totals, so use it to rank draws, not to measure the frame rate.
-
-`./play-halo3.sh --metal-capture` captures frames without a debugger (Xcode's
-debugger stops on the faults the runtime uses to watch GPU memory). While playing,
-`touch metal-captures/capture` saves the next 3 frames as
-`metal-captures/frame-<n>.gputrace`, which Xcode opens with pixel history and
-shader debugging. With `--metal-capture`, each guest draw is wrapped in a debug
-group named after its shaders (`vs <hash> ps <hash>`), so a draw can be found
-in Xcode by typing a shader hash into the navigator's filter.
-
-`AUTOPORT_SKIP_SHADERS=<hash>[,<hash>...]` drops every draw that uses one of those
-vertex or pixel shaders, to see what an expensive shader draws and how much GPU
-time skipping it saves. It's a diagnostic: the skipped effect is missing.
-
-To find the shader behind an artifact, bisect live: run the game with
-`AUTOPORT_SKIP_SHADERS_FILE` and, standing where the artifact shows,
-`tools/shader-bisect.py` in a second terminal. It skips groups of the shaders
-on screen and asks whether the artifact is still there; when a group breaks the
-whole view (lighting, post-processing), answer `b` and it narrows down and sets
-aside the shaders responsible:
-
-```sh
-AUTOPORT_SKIP_SHADERS_FILE=$PWD/shader-skip.txt ./play-halo3.sh --name <gamertag>
-tools/shader-bisect.py shader-skip.txt
-```
+[docs/technical-notes.md](docs/technical-notes.md) covers how the port works:
+what's in this repository, the macOS-specific changes and the switches for
+diagnosing rendering problems, measuring GPU time, and the known issues and
+next steps.
 
 ## Legal
 
