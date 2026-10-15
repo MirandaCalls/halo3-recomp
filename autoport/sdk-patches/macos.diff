@@ -4685,22 +4685,21 @@ index 09879c0..cdd3284 100644
                      "Allow FIFO relaxed present mode");
  
  namespace rex {
-diff --git a/src/ui/window_sdl.cpp b/src/ui/window_sdl.cpp
-index 2251429..a732df8 100644
---- a/src/ui/window_sdl.cpp
-+++ b/src/ui/window_sdl.cpp
-@@ -134,6 +134,14 @@ WindowSDL::~WindowSDL() {
- }
- 
- bool WindowSDL::OpenImpl() {
-+#if REX_PLATFORM_MAC
+diff --git a/src/ui/windowed_app_context_sdl.cpp b/src/ui/windowed_app_context_sdl.cpp
+index dc0b4c2..419b617 100644
+--- a/src/ui/windowed_app_context_sdl.cpp
++++ b/src/ui/windowed_app_context_sdl.cpp
+@@ -46,6 +46,13 @@ bool SDLWindowedAppContext::Initialize() {
+   if (requested_driver.empty()) {
+     requested_driver = "cocoa";
+   }
 +  // autoport: in a native fullscreen Space (SDL's default on macOS) the
 +  // presented frames never reach the screen: audio and input keep going on a
 +  // black display, both when starting fullscreen and when entering it from a
-+  // window. Fullscreen without a separate Space works, so use that. The
-+  // SDL_VIDEO_MAC_FULLSCREEN_SPACES environment variable still overrides this.
++  // window. Fullscreen without a separate Space works, so use that. The Cocoa
++  // driver reads this once at video init, so it must be set before it. The
++  // SDL_VIDEO_MAC_FULLSCREEN_SPACES environment variable still overrides it.
 +  SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
-+#endif
-   // SDL window coordinates are physical pixels on Windows and X11. Cocoa
-   // uses logical points and applies the backing scale itself.
-   SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN;
+ #endif
+   if (!requested_driver.empty()) {
+     SDL_SetHint(SDL_HINT_VIDEO_DRIVER, requested_driver.c_str());
