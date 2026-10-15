@@ -1519,7 +1519,7 @@ index 1d7dd08..e48f31a 100644
        result = builder_->createTriOp(spv::OpSelect, type_float_,
                                       builder_->createBinOp(spv::OpFOrdEqual, type_bool_, result,
 diff --git a/src/graphics/pipeline/shader/spirv_translator_fetch.cpp b/src/graphics/pipeline/shader/spirv_translator_fetch.cpp
-index 0476899..b1a59f1 100644
+index 0476899..ff35eab 100644
 --- a/src/graphics/pipeline/shader/spirv_translator_fetch.cpp
 +++ b/src/graphics/pipeline/shader/spirv_translator_fetch.cpp
 @@ -11,6 +11,8 @@
@@ -1531,7 +1531,27 @@ index 0476899..b1a59f1 100644
  
  #include <SPIRV/GLSL.std.450.h>
  #include <fmt/format.h>
-@@ -1865,6 +1867,14 @@ void SpirvShaderTranslator::ProcessTextureFetchInstruction(
+@@ -1733,8 +1735,18 @@ void SpirvShaderTranslator::ProcessTextureFetchInstruction(
+         // Cube auto-LOD without register gradients uses implicit LOD + bias to
+         // work around wrong-mip explicit cube gradients on Vulkan. Other dims
+         // keep explicit gradients.
++        // autoport: AUTOPORT_IMPLICIT_LOD=1 does the same for 2D textures,
++        // sampling with the host's implicit LOD and a bias instead of explicit
++        // gradients (computed from coarse derivatives and scaled), which may be
++        // a slower sampling path on some GPUs. Off by default while measured.
++        static const bool implicit_lod_2d = [] {
++          const char* value = std::getenv("AUTOPORT_IMPLICIT_LOD");
++          return value && *value && std::strcmp(value, "0") != 0;
++        }();
+         bool use_lod_bias = use_computed_lod && !instr.attributes.use_register_gradients &&
+-                            instr.dimension == xenos::FetchOpDimension::kCube;
++                            (instr.dimension == xenos::FetchOpDimension::kCube ||
++                             (implicit_lod_2d &&
++                              instr.dimension == xenos::FetchOpDimension::k2D));
+ 
+         if (use_lod_bias) {
+           // The per-axis gradient exponent biases can't be applied to the
+@@ -1865,6 +1877,14 @@ void SpirvShaderTranslator::ProcessTextureFetchInstruction(
                    spv::OpVectorTimesScalar, type_float2_, gradients_h, lod_gradient_scale_h);
                gradients_v = builder_->createNoContractionBinOp(
                    spv::OpVectorTimesScalar, type_float2_, gradients_v, lod_gradient_scale_v);
@@ -1546,7 +1566,7 @@ index 0476899..b1a59f1 100644
              } break;
              case xenos::FetchOpDimension::k3DOrStacked: {
                if (instr.attributes.use_register_gradients) {
-@@ -2482,6 +2492,39 @@ void SpirvShaderTranslator::ProcessTextureFetchInstruction(
+@@ -2482,6 +2502,39 @@ void SpirvShaderTranslator::ProcessTextureFetchInstruction(
      }
    }
  
