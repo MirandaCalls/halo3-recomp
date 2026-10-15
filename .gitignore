@@ -26,12 +26,11 @@ build/
 autoport/resync/shaders-work/
 autoport/resync/work-rtc/
 
-# xenon-gpu captures, corpora and reports
-/xenon-gpu/corpus/
-/xenon-gpu/analysis/
-/xenon-gpu/docs/
-/xenon-gpu/build/
-/xenon-gpu/*.json
+# Shader corpora and scan output
+/tools/shaders/*.xsh
+/tools/shaders/*.csv
+/tools/shaders/*.json
+/tools/shaders/build/
 
 # Logs, frames, leftovers
 *.log

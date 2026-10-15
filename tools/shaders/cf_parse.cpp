@@ -5,7 +5,7 @@
 // starting at slot `address`; the first such address marks where control flow
 // ends. alloc instructions reveal the stage: only vertex shaders allocate a
 // position export.
-#include <xgpu/ucode.h>
+#include "ucode.h"
 
 #include <algorithm>
 #include <utility>

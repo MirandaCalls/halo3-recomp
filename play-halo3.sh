@@ -13,7 +13,6 @@
 #                  next 3 frames as metal-captures/frame-<n>.gputrace (open in Xcode)
 #   --scale N      render at N x N internal resolution (Halo 3 is 1152x640)
 #   --pad DIR      enable the scripted pad (drive it with autoport/pad.sh DIR ...)
-#   --native       render with the xenon-gpu native renderer (rexgpu-xgpu plugin)
 #   --instance N   system link on one PC: instance N (1..16) uses IP 127.0.0.<N+1>,
 #                  gamertag PlayerN and its own saves/caches (games/halo3/instances/N);
 #                  several instances may run at once
@@ -60,7 +59,6 @@ while [ $# -gt 0 ]; do
       mkdir -p "$ROOT/metal-captures"
       envs+=(MTL_CAPTURE_ENABLED=1 AUTOPORT_METAL_CAPTURE="$ROOT/metal-captures")
       ;;
-    --native) plugin=xgpu ;;
     --instance)
       shift
       instance=$1
@@ -158,11 +156,11 @@ if [ "$HOST_OS" = linux ]; then
 fi
 
 cd "$BUILD"
-# The GPU plugins live in the SDK. Relink them if this tree was copied from
-# another machine/path (the symlinks port.sh made are absolute).
-for gpu_plugin in librexgpu-xenos.$DLEXT librexgpu-xgpu.$DLEXT; do
-  [ -e "$SDK_LIB/$gpu_plugin" ] || continue
-  [ -e "$gpu_plugin" ] || ln -sfn "$SDK_LIB/$gpu_plugin" "$gpu_plugin"
-done
+# The GPU plugin lives in the SDK. Relink it if this tree was copied from
+# another machine/path (the symlink port.sh made is absolute).
+gpu_plugin=librexgpu-xenos.$DLEXT
+if [ -e "$SDK_LIB/$gpu_plugin" ] && [ ! -e "$gpu_plugin" ]; then
+  ln -sfn "$SDK_LIB/$gpu_plugin" "$gpu_plugin"
+fi
 exec env "${envs[@]}" "$LIBPATH_VAR=$BUILD:$H3_LIB:$SDK_LIB" ./halo3 \
   --game_data_root="$GAME" --gpu_plugin=$plugin "${window[@]}" "${game_defaults[@]}" "${extra[@]}"
