@@ -1,16 +1,14 @@
 # reclaimed-ring
 
-A native macOS port of Halo 3, which also still builds and runs on Linux. It
-recompiles your own Halo 3 (Xbox 360) disc image into a native binary and plays
-it, including working **system link (LAN) multiplayer**, even between machines
-that only share a **ZeroTier** network.
+A native macOS port of Halo 3 for Apple Silicon Macs. It recompiles your own
+Halo 3 (Xbox 360) disc image into a native Mac app and plays it, including
+working **system link (LAN) multiplayer**, even between machines that only
+share a **ZeroTier** network.
 
 reclaimed-ring started as a fork of
 [summers-aaron/xenon-pc-comp](https://github.com/summers-aaron/xenon-pc-comp),
-a Linux port, and is now macOS-first: it adds the macOS port (Apple Silicon,
-through MoltenVK) and the rendering fixes and performance work it needed.
-Linux keeps building as before, but most of the recent work has only been
-tested on macOS.
+a Linux port, and is now macOS-first: it adds the macOS port (Vulkan through
+MoltenVK) and the rendering fixes and performance work it needed.
 
 Built on [ReXGlue](https://github.com/rexglue/rexglue-sdk), the open-source
 Xbox 360 static-recompilation toolchain.
@@ -22,27 +20,16 @@ for what's left.
 
 ## Requirements
 
-### macOS
-
-- macOS on Apple Silicon (tested on an M3 MacBook Air;
-  Intel Macs are untested), with Xcode installed (the SDK builds MoltenVK
-  from source, which needs the full Xcode, not just the command-line tools)
+- A Mac with Apple Silicon (tested on an M3 MacBook Air; Intel Macs are
+  untested)
+- Xcode, the full app rather than just the command-line tools (the build
+  compiles MoltenVK from source)
 - Homebrew: `brew install bash cmake ninja python` (the scripts need bash 4.4+,
   which macOS lacks, and python 3.11+; setup installs `capstone` into a private
   venv under `tools/venv`)
 - ~40 GB free disk
-
-On macOS everything builds natively with Xcode's clang instead of in the
-container; Vulkan runs through MoltenVK, which the SDK bundles. The same
-`./setup-halo3.sh` and `./play-halo3.sh` commands work.
-
-### Linux
-
-- Linux x86-64 (developed on Fedora 44), a Vulkan-capable GPU
-- `podman`, `git`, `python3`
-- ~40 GB free disk
 - Your own Halo 3 disc image (ISO); it stays on your machine
-- For internet play: both machines on the same ZeroTier network
+- For internet play: both Macs on the same ZeroTier network
 
 ## Build
 
@@ -71,10 +58,9 @@ join. While a game is running, `tools/zt-probe.py` lists every Halo 3 it can
 see on the ZeroTier link (they all answer the probe on UDP 37023).
 
 Useful launcher flags: `--fullscreen` (the cursor auto-hides), `--keyboard`
-(keyboard and mouse), `--vsync` (no tearing, but costs frame rate; see the known issues),
-`--instance N` (several instances on one PC), `--ip ADDR` (pick the
-system-link interface), `--native` (experimental native renderer), `--fps`,
-`--scale N`, `--help`.
+(keyboard and mouse), `--vsync` (no tearing, but costs frame rate; see the
+known issues), `--instance N` (several instances on one Mac), `--ip ADDR`
+(pick the system-link interface), `--scale N`, `--help`.
 
 If the game aborts with "Call to invalid or unregistered function" somewhere the
 setup's automatic runs never reached (it only plays the boot and menu), play to
@@ -101,15 +87,15 @@ each other.
 - Guest ports below 1024 are mapped up by `net_port_offset` (default 36000).
   Every machine in a system link must use the same offset.
 - `--instance 1..16` gives each local instance its own `127.0.0.N`, saves and
-  cache for system link on a single PC.
+  cache for system link on a single Mac.
 - Kernel/GPU details and the session history are in `autoport/` comments.
 
 ## More
 
 [docs/technical-notes.md](docs/technical-notes.md) covers how the port works:
 what's in this repository, the macOS-specific changes and the switches for
-diagnosing rendering problems, measuring GPU time, and the known issues and
-next steps.
+diagnosing rendering problems, measuring GPU time, the known issues and next
+steps, and the Linux build the project started from.
 
 ## Legal
 

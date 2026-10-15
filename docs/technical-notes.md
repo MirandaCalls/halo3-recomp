@@ -4,6 +4,16 @@ How the port is put together, the macOS-specific changes and switches, how to
 measure GPU time, and what's left to do. For installing and playing, see the
 [README](../README.md).
 
+## Linux
+
+The project started as a Linux port, and the same scripts still build it
+there: on Linux x86-64 (developed on Fedora 44) with a Vulkan-capable GPU,
+`podman`, `git` and `python3`, `./setup-halo3.sh` builds inside the
+`docker/Containerfile` container and `./play-halo3.sh` runs the result.
+`--native` selects the experimental native renderer in `xenon-gpu/`. Most
+of the recent rendering and performance work is macOS-only by default and
+hasn't been retested on Linux.
+
 ## What's in this repository
 
 | Path | What |
