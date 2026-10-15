@@ -291,8 +291,9 @@ What differs from the Linux path:
 - `AUTOPORT_EARLY_SUBMIT_DRAWS=N`: commands reach the GPU only when a
   submission ends (a swap or a guest fence), so after the game waits on the
   GPU, the GPU idles while the rest of the frame is recorded. On macOS a
-  resolve also ends the submission when the GPU has finished everything
-  submitted and at least N draws (default 16) are waiting; `0` turns it off.
+  resolve, and every 8th draw, also end the submission when the GPU has
+  finished everything submitted and at least N draws (default 16) are waiting;
+  `0` turns it off.
 - `AUTOPORT_VBLANK_ON_DEMAND_MS`: Halo 3 presents on every second 60 Hz
   vblank, so a frame that misses 33.3 ms waits for the next vblank (50 ms,
   then 66.7 ms) with the GPU idle. On macOS, once 33 ms have passed since the
