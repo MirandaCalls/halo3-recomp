@@ -54,7 +54,7 @@ END {
          (last > first) ? frames / (last - first) : 0, passes, passes / frames
   printf "GPU ms per frame: %.1f in render passes, %.1f between passes (compute, copies)\n\n",
          total / frames, gap / frames
-  print "by kind (D game draws, X EDRAM transfer/clear, P copy to window):"
+  print "by kind (D game draws, X EDRAM transfer/clear, P copy to window, R resolve copy, T texture load):"
   for (k in kind_ms)
     printf "  %s  %6.1f ms/frame  %5.1f%%  %6.1f passes/frame\n", k, kind_ms[k] / frames,
            100 * kind_ms[k] / total, kind_n[k] / frames
