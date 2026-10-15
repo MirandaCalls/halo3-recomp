@@ -305,7 +305,8 @@ What differs from the Linux path:
   with the host's implicit level of detail plus a bias, as cube maps already
   are, instead of explicit gradients the shader computes from coarse
   derivatives. The per-axis gradient biases of the fetch constant become the
-  greater of the two (exact when they're equal, the usual case).
+  greater of the two (exact when they're equal, the usual case). Measured on
+  an M3 in per-draw timing: no difference beyond run-to-run noise.
 - `AUTOPORT_TEXTURE_SANITIZE=1` replaces infinite texture fetch results with
   ±65504 and NaN with 0. Xenos 16-bit floats have no infinity or NaN (exponent
   31 holds 65536 to 131008), but 16-bit float textures are copied to the host
