@@ -1,12 +1,15 @@
 # Upstream checkouts and everything derived from them (never committed)
 /ref/
 /games/
+# extracted disc contents (setup-halo3.sh)
+/Halo 3/
 
 # SDK builds and downloads under tools/ (our scripts and extract-xiso stay)
 /tools/rexglue-sdk/
 /tools/rexglue-src/
 /tools/rexglue-resync/
 /tools/rexglue-h3/
+/tools/venv/
 /tools/nightly/
 /tools/vvl/
 /tools/xenia/
@@ -34,3 +37,9 @@ autoport/resync/work-rtc/
 *.log
 *.ppm
 *.pid
+
+# Metal frame captures (play-halo3.sh --metal-capture)
+/metal-captures/
+/shader-skip.txt*
+/draws.log*
+/pairs.txt

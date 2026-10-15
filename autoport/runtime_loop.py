@@ -8,6 +8,10 @@ Each iteration:
   4. append `0xX = {}` to that module's config/<stem>_auto.toml
   5. fix_unresolved.py (codegen + tail-merge fixes), gen_xdll_imports.py, rebuild
 Stops when a run ends without a new FATAL address.
+
+With --from-log, nothing is run: every FATAL address in that log (from playing
+the game with --log_file) is added, then the project is regenerated and rebuilt
+once. This covers code the automatic runs never reach, such as the campaign.
 """
 
 import argparse
@@ -45,6 +49,9 @@ def module_for(addr, runlog, manifest):
             for m in data.get("modules", []):
                 if m["guest_path"].lower() == guest.lower():
                     return Path(m["file_path"]).stem
+            entry = Path(data["entrypoint"]["file_path"])
+            if entry.name.lower() == Path(guest).name.lower():
+                return entry.stem
     return None
 
 
@@ -63,6 +70,53 @@ def add_function(manifest, stem, addr):
     return True
 
 
+def regenerate_and_build(manifest, root, args, logs, tag):
+    if subprocess.run([sys.executable, HERE / "fix_unresolved.py", manifest, "--rexglue", args.rexglue]).returncode:
+        return False
+    if subprocess.run([sys.executable, HERE / "gen_xdll_imports.py", manifest,
+                       "--log", root / "codegen_auto.log"]).returncode:
+        return False
+    if subprocess.run([sys.executable, HERE / "patch_spin_hints.py", manifest]).returncode:
+        return False
+    if sh(["bash", "-c", args.build_cmd], logs / f"build{tag}.log", cwd=root):
+        print(f"[{tag}] build failed; see {logs / f'build{tag}.log'}")
+        return False
+    ext = args.dlext
+    subprocess.run(["bash", "-c", f"shopt -s nullglob; for f in lib*.{ext}; do n=${{f#lib}}; ln -sf $f ${{n%.{ext}}}; done"],
+                   cwd=args.build_dir)
+    return True
+
+
+def fix_from_log(manifest, root, args, logs):
+    log = args.from_log
+    text = log.read_text(errors="replace")
+    addrs = sorted({int(a, 16) for a in RE_FATAL.findall(text)})
+    if not addrs:
+        print(f"no unregistered-call FATAL in {log}")
+        return 1
+    # The module ranges are logged at startup, so once the log rotates
+    # (halo3.log -> halo3.1.log, ...) they are in an older file.
+    rotated = sorted(log.parent.glob(f"{log.stem}.*{log.suffix}"))
+    ranges = text + "".join(p.read_text(errors="replace") for p in rotated)
+    if not RE_TABLE.search(ranges):
+        print(f"{log} (and its rotated files) no longer has the module ranges logged at startup;\n"
+              "play again with --log_max_file_size_mb=200 so the log isn't rotated")
+        return 1
+    added = 0
+    for addr in addrs:
+        stem = module_for(addr, ranges, manifest)
+        if stem is None:
+            print(f"0x{addr:08X}: not in any module's code range, not auto-fixable")
+        elif add_function(manifest, stem, addr):
+            print(f"{stem}: added function 0x{addr:08X}")
+            added += 1
+        else:
+            print(f"{stem}: 0x{addr:08X} was already added")
+    if not added:
+        return 1
+    return 0 if regenerate_and_build(manifest, root, args, logs, "-from-log") else 1
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("manifest", type=Path)
@@ -74,15 +128,25 @@ def main():
     ap.add_argument("--run-args", default="")
     ap.add_argument("--seconds", type=int, default=60)
     ap.add_argument("--max-iter", type=int, default=25)
+    ap.add_argument("--dlext", default="so", help="shared library extension (so, dylib)")
+    ap.add_argument("--libpath-var", default="LD_LIBRARY_PATH",
+                    help="dynamic loader search path variable (DYLD_LIBRARY_PATH on macOS)")
+    ap.add_argument("--from-log", type=Path,
+                    help="add the FATAL addresses from this game log and rebuild once, without running")
     args = ap.parse_args()
     manifest = args.manifest.resolve()
     root = manifest.parent
     logs = root / "autoport_logs"
     logs.mkdir(exist_ok=True)
+    if args.from_log:
+        return fix_from_log(manifest, root, args, logs)
 
     env = dict(os.environ)
-    env["LD_LIBRARY_PATH"] = f"{args.build_dir}:{args.sdk_lib}"
-    env.setdefault("SDL_VIDEODRIVER", "offscreen")  # headless: GPU emulation still runs on Vulkan
+    env[args.libpath_var] = f"{args.build_dir}:{args.sdk_lib}"
+    if sys.platform != "darwin":
+        # headless: GPU emulation still runs on Vulkan. macOS keeps a real window: SDL's
+        # offscreen driver is untested with MoltenVK.
+        env.setdefault("SDL_VIDEODRIVER", "offscreen")
 
     for it in range(args.max_iter):
         runlog = logs / f"run{it}.log"
@@ -102,18 +166,8 @@ def main():
             return 1
         print(f"[iter {it}] {stem}: added function 0x{addr:08X}")
 
-        if subprocess.run([sys.executable, HERE / "fix_unresolved.py", manifest, "--rexglue", args.rexglue]).returncode:
+        if not regenerate_and_build(manifest, root, args, logs, it):
             return 1
-        if subprocess.run([sys.executable, HERE / "gen_xdll_imports.py", manifest,
-                           "--log", root / "codegen_auto.log"]).returncode:
-            return 1
-        if subprocess.run([sys.executable, HERE / "patch_spin_hints.py", manifest]).returncode:
-            return 1
-        if sh(["bash", "-c", args.build_cmd], logs / f"build{it}.log", cwd=root):
-            print(f"[iter {it}] build failed; see {logs / f'build{it}.log'}")
-            return 1
-        subprocess.run(["bash", "-c", "for f in lib*.so; do n=${f#lib}; ln -sf $f ${n%.so}; done"],
-                       cwd=args.build_dir)
     return 1
 
 
