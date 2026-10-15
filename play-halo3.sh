@@ -2,7 +2,7 @@
 # Boot the latest Halo 3 port (resync SDK build).
 #
 # Usage: ./play-halo3.sh [options] [-- extra runtime flags]
-#   --fullscreen   fullscreen instead of a 1280x800 window
+#   --fullscreen   fullscreen instead of a 1280x800 window (the mouse cursor auto-hides)
 #   --size WxH     window size instead of 1280x800
 #   --keyboard     play with keyboard and mouse (SDK mnk_mode, mouse look)
 #   --fps          print the guest frame rate every 5 s (no effect yet: nothing reads

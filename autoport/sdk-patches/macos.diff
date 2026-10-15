@@ -4637,6 +4637,30 @@ index 77bce25..53684bc 100644
  
        PROFILE_THREAD_ENTER(thread->name().c_str());
  
+diff --git a/src/ui/rex_app.cpp b/src/ui/rex_app.cpp
+index b94fe9e..a712cc2 100644
+--- a/src/ui/rex_app.cpp
++++ b/src/ui/rex_app.cpp
+@@ -347,12 +347,18 @@ bool ReXApp::SetupPresentation() {
+   window_->AddListener(this);
+   window_->AddInputListener(this, 0);
+ 
++  // autoport: in fullscreen the mouse cursor auto-hides (hidden from the
++  // start, shown briefly when the mouse moves); in a window it stays visible.
+   if (REXCVAR_GET(fullscreen)) {
+     window_->SetFullscreen(true);
++    window_->SetCursorVisibility(ui::Window::CursorVisibility::kAutoHidden);
+   }
+   rex::cvar::RegisterChangeCallback("fullscreen", [this](std::string_view, std::string_view value) {
+     if (window_) {
+-      window_->SetFullscreen(rex::string::from_string<bool>(value, false));
++      bool fullscreen = rex::string::from_string<bool>(value, false);
++      window_->SetFullscreen(fullscreen);
++      window_->SetCursorVisibility(fullscreen ? ui::Window::CursorVisibility::kAutoHidden
++                                              : ui::Window::CursorVisibility::kVisible);
+     }
+   });
+   window_->Open();
 diff --git a/src/ui/window_sdl.cpp b/src/ui/window_sdl.cpp
 index 2251429..a732df8 100644
 --- a/src/ui/window_sdl.cpp
