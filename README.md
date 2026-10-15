@@ -69,9 +69,11 @@ Every player needs a different `--name` (the XUID is derived from it). In game:
 join. While a game is running, `tools/zt-probe.py` lists every Halo 3 it can
 see on the ZeroTier link (they all answer the probe on UDP 37023).
 
-Useful launcher flags: `--instance N` (several instances on one PC),
-`--ip ADDR` (pick the system-link interface), `--native` (experimental native
-renderer), `--fps`, `--scale N`, `--help`.
+Useful launcher flags: `--fullscreen` (the cursor auto-hides), `--keyboard`
+(keyboard and mouse), `--vsync` (no tearing, but costs frame rate, see below),
+`--instance N` (several instances on one PC), `--ip ADDR` (pick the
+system-link interface), `--native` (experimental native renderer), `--fps`,
+`--scale N`, `--help`.
 
 If the game aborts with "Call to invalid or unregistered function" somewhere the
 setup's automatic runs never reached (it only plays the boot and menu), play to
@@ -83,6 +85,50 @@ tools/add-missed-functions.sh halo3.log
 ```
 
 Repeat until it gets past that point; each crash names one more function.
+
+## Known issues and next steps
+
+State of the macOS build on an M3 MacBook Air: about 29 fps on average, mostly
+29–30 in combat (the game caps at 30), with no shader-compile hitches after a
+first visit. Remaining work, roughly by priority:
+
+- [ ] **Vsync.** `--vsync` (FIFO presentation) removes tearing but lowers the
+  frame rate and adds input lag: frames are presented from the GPU command
+  thread, which blocks until the display frees a swapchain image. Needs
+  presentation moved off that thread (or a two-image swapchain). Without it,
+  the default immediate presentation can tear.
+- [ ] **Native fullscreen Spaces show black** (audio and input keep running).
+  Worked around by fullscreen without a separate Space (the default now; the
+  green button and Ctrl+Cmd+F may zoom instead of going fullscreen). The cause
+  inside the Space is unknown.
+- [ ] **Broad testing.** Most measurements and checks were on Sierra 117. Play
+  other levels and note visual bugs (particles, muzzle flashes, water, bloom,
+  textures) and spots well under 30 fps.
+- [ ] **Water briefly broken when approaching it** — seen once, in a run with
+  per-dispatch GPU timing on; not yet seen in normal play. Confirm or close.
+- [ ] **Single-pixel dots on foliage** were reduced but possibly not gone
+  entirely; re-check.
+- [ ] **Particle updates cost ~5 ms of GPU per frame.** A few update shaders
+  (`F1D589E8…`, `F90A6049…`) run long loops on ~10 threads. Concurrent dispatch
+  (MoltenVK patch) and plain IEEE multiplies were tried and gained nothing; the
+  remaining lever is cheaper translated control flow.
+- [ ] **EDRAM transfers, resolves and texture loads cost ~5 ms per frame**,
+  spread over ~85 small operations each needing a GPU sync. Batching was
+  measured as not worth it (most are alone between draws); the structural fix
+  is resolving straight into the textures the game samples.
+- [ ] **GPU idle around the resolve sync** (the readback that fixed the plasma
+  flashes): a few ms per frame in heavy scenes while the game reacts to it.
+- [ ] **Thermal throttling** on fanless Macs: long sessions slow the GPU by up
+  to ~1.5–2×; less GPU work per frame is the only remedy.
+- [ ] **Water tessellation** costs ~3 ms per water draw (MoltenVK emulates
+  tessellation with compute); a quality switch capping its factors is an option.
+- [ ] **Rendering above 1x (`--scale 2`)**: the resolve-downscale pipeline was
+  fixed but never tested in game.
+- [ ] **60 fps** would need Halo 3's 30 fps cap lifted and the GPU work per
+  frame roughly halved.
+- [ ] Clean up: `AUTOPORT_IMPLICIT_LOD` measured no gain and could go; the log's
+  "Couldn't extract memexport stream constant index" errors are harmless noise
+  from Halo 3's shaders.
 
 ## ZeroTier notes
 
